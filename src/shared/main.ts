@@ -14,9 +14,13 @@ async function bootstrap() {
     { bufferLogs: true },
   );
 
+  //Global routing version prefix
+  app.setGlobalPrefix('api/v1');
+
+  // Use the custom logger from nestjs-pino
   app.useLogger(app.get(Logger));
 
-  // Get the custome config service
+  // Get the custom config service
   const config = app.get(AppConfigService);
   await app.listen(config.port || 3000, '0.0.0.0');
 }

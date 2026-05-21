@@ -4,6 +4,9 @@ import { AppService } from './app.service';
 import { AppConfigModule } from './config/config.module';
 import { LoggerModule } from 'nestjs-pino';
 import { AppConfigService } from './config/config.service';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { SystemLoggingInterceptor } from './core/interceptors/logging.interceptor';
+import { GlobalHttpExceptionFilter } from './core/filters/http-exception.filter';
 
 @Module({
   imports: [
@@ -32,6 +35,13 @@ import { AppConfigService } from './config/config.service';
     }),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    { provide: APP_INTERCEPTOR, useClass: SystemLoggingInterceptor },
+    {
+      provide: APP_FILTER,
+      useClass: GlobalHttpExceptionFilter,
+    },
+  ],
 })
 export class AppModule {}
