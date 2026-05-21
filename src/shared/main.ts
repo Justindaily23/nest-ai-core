@@ -10,7 +10,10 @@ import { AppConfigService } from './config/config.service';
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter(),
+    new FastifyAdapter({
+      connectionTimeout: 10000, // 10 seconds to estbalish a connection
+      requestTimeout: 15000, // 15 seconds to process a request
+    }),
     { bufferLogs: true },
   );
 

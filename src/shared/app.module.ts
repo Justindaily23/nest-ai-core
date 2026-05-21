@@ -7,6 +7,7 @@ import { AppConfigService } from './config/config.service';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { SystemLoggingInterceptor } from './core/interceptors/logging.interceptor';
 import { GlobalHttpExceptionFilter } from './core/filters/http-exception.filter';
+import { RedisModule } from './core/redis/redis.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { GlobalHttpExceptionFilter } from './core/filters/http-exception.filter'
         };
       },
     }),
+    RedisModule,
   ],
   controllers: [AppController],
   providers: [

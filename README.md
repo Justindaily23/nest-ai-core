@@ -59,6 +59,17 @@ Most AI software integrations fail in production due to vendor lock-in, loose da
 
 ---
 
+## System Reliability & Execution Boundaries
+
+This system enforces hard operational guarantees at the transport and application layers to prevent silent failure modes common in AI-driven backends.
+
+- **Fastify-native request timeouts** actively terminate stalled connections at the TCP level, preventing background execution leaks during long-running inference or vector search operations.
+- **Structured system logging** is handled via `nestjs-pino`, separating baseline HTTP telemetry from higher-level business and AI metrics.
+- **Global execution interceptors** track request lifecycles and execution latency without interfering with Fastify’s transport controls.
+- **Centralized exception filtering** normalizes all runtime and transport errors into predictable API responses while preserving internal observability signals.
+
+These boundaries ensure that dropped clients, upstream AI instability, or degraded dependencies cannot silently exhaust server resources.
+
 ## Tech Stack Foundations
 
 - **Runtime:** Node.js (LTS) / TypeScript (Strict Mode Enforced)
