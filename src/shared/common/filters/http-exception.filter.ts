@@ -7,6 +7,8 @@ import {
 } from '@nestjs/common';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { PinoLogger } from 'nestjs-pino';
+import { HttpExceptionFilterLogPayload } from '../logging/logging.types';
+import { serializeException } from '../logging/logger-utils';
 
 @Catch()
 export class GlobalHttpExceptionFilter implements ExceptionFilter {
@@ -23,7 +25,7 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
       : `${request.method} ${request.url}`;
 
     let statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
-    let message = 'Internal server error';
+    let message = 'An unexpected internal error occurred';
 
     if (exception instanceof HttpException) {
       statusCode = exception.getStatus();
@@ -43,23 +45,15 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
       }
     }
 
-    // internal structured loggin
-    this.logger.error(
-      {
-        system: 'http',
-        context: executionContext,
-        statusCode,
-        err:
-          exception instanceof Error
-            ? {
-                name: exception.name,
-                message: exception.message,
-                stack: exception.stack,
-              }
-            : exception,
-      },
-      'Unhandled exception',
-    );
+    // internal structured logging
+    const errorLog: HttpExceptionFilterLogPayload = {
+      system: 'http',
+      endpoint: executionContext,
+      statusCode,
+      err: serializeException(exception),
+    };
+
+    this.logger.error(errorLog, 'Unhandled exception');
 
     //  Clean, standardized API response
     void response.status(statusCode).send({

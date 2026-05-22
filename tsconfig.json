@@ -14,7 +14,9 @@
     "sourceMap": true,
     "outDir": "./dist",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@core/*": ["./src/shared/core/*"],
+      "@common/*": ["./src/shared/common/*"]
     },
     "incremental": true,
     "skipLibCheck": true,

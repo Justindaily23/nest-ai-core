@@ -8,6 +8,8 @@ import { Observable } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 import { PinoLogger } from 'nestjs-pino';
 import { FastifyRequest } from 'fastify';
+import { HttpInterceptorLogPayload } from '../../common/logging/logging.types';
+import { serializeException } from '../../common/logging/logger-utils';
 
 @Injectable()
 export class SystemLoggingInterceptor implements NestInterceptor {
@@ -27,31 +29,30 @@ export class SystemLoggingInterceptor implements NestInterceptor {
         const executionDuration = Date.now() - startTime;
 
         // Log a clean structured benchmark for perfomance tracing/monitoring
-        this.logger.info(
-          {
-            system: 'http',
-            executionContext,
-            metrics: {
-              executionDuration,
-            },
+        const successLog: HttpInterceptorLogPayload = {
+          system: 'http',
+          executionContext,
+          http: { method, url },
+          metrics: {
+            executionDuration,
           },
-          'Execution completed',
-        );
+        };
+        this.logger.info(successLog, 'Execution completed');
       }),
       catchError((error) => {
         const durationMs = Date.now() - startTime;
 
-        this.logger.error(
-          {
-            system: 'http',
-            executionContext,
-            metrics: {
-              durationMs,
-            },
-            err: error,
+        const errorLog: HttpInterceptorLogPayload = {
+          system: 'http',
+          executionContext,
+          http: { method, url },
+          metrics: {
+            durationMs,
           },
-          'Execution failed',
-        );
+          err: serializeException(error), // Reusable normalization
+        };
+
+        this.logger.error(errorLog, 'Execution failed');
 
         throw error;
       }),

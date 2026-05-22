@@ -6,7 +6,7 @@ import { LoggerModule } from 'nestjs-pino';
 import { AppConfigService } from './config/config.service';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { SystemLoggingInterceptor } from './core/interceptors/logging.interceptor';
-import { GlobalHttpExceptionFilter } from './core/filters/http-exception.filter';
+import { GlobalHttpExceptionFilter } from './common/filters/http-exception.filter';
 import { RedisModule } from './core/redis/redis.module';
 
 @Module({
