@@ -9,6 +9,8 @@ import { FastifyReply, FastifyRequest } from 'fastify';
 import { PinoLogger } from 'nestjs-pino';
 import { HttpExceptionFilterLogPayload } from '../logging/logging.types';
 import { serializeException } from '../logging/logger-utils';
+import { OperationalException } from '../exceptions/operational.exception';
+import { ContextStore } from '../context/context.store';
 
 @Catch()
 export class GlobalHttpExceptionFilter implements ExceptionFilter {
@@ -27,7 +29,15 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
     let statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'An unexpected internal error occurred';
 
-    if (exception instanceof HttpException) {
+    // Catch custom core/infrastructure system errors
+    if (exception instanceof OperationalException) {
+      statusCode = exception.statusCode;
+
+      message =
+        statusCode >= 500
+          ? 'A secure backend operational error occurred. Please contact support.'
+          : exception.message;
+    } else if (exception instanceof HttpException) {
       statusCode = exception.getStatus();
       const errorResponse = exception.getResponse();
 
@@ -43,6 +53,14 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
           message = objResponse.message;
         }
       }
+    }
+
+    // Safely extract your tracking trace ID out of thin air
+    let requestId = 'N/A';
+    try {
+      requestId = ContextStore.get().requestId;
+    } catch {
+      // Fallback if the error happened before ContextStore initialized
     }
 
     // internal structured logging
@@ -61,7 +79,7 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
       statusCode,
       message,
       timestamp: new Date().toISOString(),
-      path: request.url,
+      requestId,
     });
   }
 }

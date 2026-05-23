@@ -2,7 +2,7 @@ export type LogSystemType = 'http' | 'redis' | 'database' | 'billing';
 
 // GlobalHttpExceptionFilter
 export interface HttpExceptionFilterLogPayload {
-  system: 'http';
+  system: 'http' | 'redis' | 'database' | 'system' | 'llm';
   endpoint: string;
   statusCode: number;
   err: unknown;
@@ -10,7 +10,7 @@ export interface HttpExceptionFilterLogPayload {
 
 //  SystemLoggingInterceptor
 export interface HttpInterceptorLogPayload {
-  system: 'http';
+  system: 'http' | 'redis' | 'database' | 'system' | 'llm';
   executionContext: string;
   http: {
     method: string;

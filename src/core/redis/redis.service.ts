@@ -6,8 +6,8 @@ import { PinoLogger } from 'nestjs-pino';
 import { RedisKey, RedisLockOptions } from './redis.types';
 import { REDIS_NAMESPACE } from './redis.constants';
 import { RedisServiceLogPayload } from '../../common/logging/logging.types';
-import { RedisOperationException } from '@/common/exceptions/redis-operation.exception';
 import { randomUUID } from 'crypto';
+import { OperationalException } from '@/common/exceptions/operational.exception';
 
 @Injectable()
 export class RedisService implements OnModuleDestroy {
@@ -33,8 +33,11 @@ export class RedisService implements OnModuleDestroy {
         err: error,
       };
       this.logger.error(logPayLoad, 'Failed to fetch key from redis');
-      throw new RedisOperationException(
+      throw new OperationalException(
+        'redis',
+        'REDIS_OPERATION_FAILED',
         `Failed to retrieve cached ${domain} data`,
+        500,
         error,
       );
     }
@@ -61,8 +64,11 @@ export class RedisService implements OnModuleDestroy {
         err: error,
       };
       this.logger.error(logPayLoad, 'Failed to set key in redis');
-      throw new RedisOperationException(
+      throw new OperationalException(
+        'redis',
+        'REDIS_OPERATION_FAILED',
         `Failed to cache ${domain} data`,
+        500,
         error,
       );
     }
@@ -80,8 +86,11 @@ export class RedisService implements OnModuleDestroy {
         err: error,
       };
       this.logger.error(logPayLoad, 'Failed to delete key from redis');
-      throw new RedisOperationException(
+      throw new OperationalException(
+        'redis',
+        'REDIS_OPERATION_FAILED',
         `Failed to delete cached ${domain} data`,
+        500,
         error,
       );
     }
@@ -99,8 +108,11 @@ export class RedisService implements OnModuleDestroy {
         err: error,
       };
       this.logger.error(logPayLoad, 'Failed to increment key in redis');
-      throw new RedisOperationException(
+      throw new OperationalException(
+        'redis',
+        'REDIS_OPERATION_FAILED',
         `Failed to increment cached ${domain} data`,
+        500,
         error,
       );
     }
@@ -118,8 +130,11 @@ export class RedisService implements OnModuleDestroy {
         err: error,
       };
       this.logger.error(logPayLoad, 'Failed to get TTL of key from redis');
-      throw new RedisOperationException(
+      throw new OperationalException(
+        'redis',
+        'REDIS_OPERATION_FAILED',
         `Failed to get TTL of cached ${domain} data`,
+        500,
         error,
       );
     }
@@ -152,8 +167,11 @@ export class RedisService implements OnModuleDestroy {
         err: error,
       };
       this.logger.error(logPayLoad, 'Failed to acquire lock in redis');
-      throw new RedisOperationException(
+      throw new OperationalException(
+        'redis',
+        'REDIS_OPERATION_FAILED',
         `Distributed lock acquisition failed for ${domain}`,
+        500,
         error,
       );
     }
@@ -184,8 +202,11 @@ export class RedisService implements OnModuleDestroy {
         err: error,
       };
       this.logger.error(logPayLoad, 'Failed to release lock in redis');
-      throw new RedisOperationException(
+      throw new OperationalException(
+        'redis',
+        'REDIS_OPERATION_FAILED',
         `Distributed lock release failed for ${domain}`,
+        500,
         error,
       );
     }
@@ -204,7 +225,13 @@ export class RedisService implements OnModuleDestroy {
         err: error,
       };
       this.logger.error(logPayLoad, 'Redis core instance  health check failed');
-      throw new RedisOperationException(`Redis health check failed`, error);
+      throw new OperationalException(
+        'redis',
+        'REDIS_OPERATION_FAILED',
+        `Redis health check failed`,
+        500,
+        error,
+      );
     }
   }
   /*--- Shutdwon ---*/
@@ -220,9 +247,12 @@ export class RedisService implements OnModuleDestroy {
         key: 'shutdown',
         err: error,
       };
-      this.logger.error(
-        logPayLoad,
+      throw new OperationalException(
+        'redis',
+        'REDIS_OPERATION_FAILED',
         'Error occurred while closing Redis connection',
+        500,
+        error,
       );
     }
   }
