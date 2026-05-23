@@ -1,14 +1,13 @@
 import { Global, Module } from '@nestjs/common';
 import { RedisService } from './redis.service';
 import { REDIS_CLIENT } from './redis.constants';
-import { AppConfigModule } from '@/shared/config/config.module';
-import { AppConfigService } from '@/shared/config/config.service';
+import { AppConfigService } from '@/config/config.service';
 import Redis from 'ioredis';
 import { Logger } from 'nestjs-pino';
 
 @Global()
 @Module({
-  imports: [AppConfigModule],
+  imports: [],
   providers: [
     RedisService,
     {

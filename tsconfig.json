@@ -15,8 +15,8 @@
     "outDir": "./dist",
     "paths": {
       "@/*": ["./src/*"],
-      "@core/*": ["./src/shared/core/*"],
-      "@common/*": ["./src/shared/common/*"]
+      "@core/*": ["./src/core/*"],
+      "@common/*": ["./src/common/*"]
     },
     "incremental": true,
     "skipLibCheck": true,

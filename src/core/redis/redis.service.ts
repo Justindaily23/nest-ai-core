@@ -6,7 +6,7 @@ import { PinoLogger } from 'nestjs-pino';
 import { RedisKey, RedisLockOptions } from './redis.types';
 import { REDIS_NAMESPACE } from './redis.constants';
 import { RedisServiceLogPayload } from '../../common/logging/logging.types';
-import { RedisOperationException } from '@/shared/common/exceptions/redis-operation.exception';
+import { RedisOperationException } from '@/common/exceptions/redis-operation.exception';
 import { randomUUID } from 'crypto';
 
 @Injectable()
