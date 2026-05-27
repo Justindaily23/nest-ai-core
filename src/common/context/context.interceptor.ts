@@ -6,23 +6,42 @@ import {
 } from '@nestjs/common';
 import { FastifyRequest } from 'fastify';
 import { randomUUID } from 'crypto';
-import { Observable } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 import { ContextStore } from './context.store';
-import { ExecutionContext } from './execution-context';
+import { ActorType, AppRequestContext, PlanTier } from './execution-context';
 
 @Injectable()
 export class ContextInterceptor implements NestInterceptor {
-  intercept(context: NestExecutionContext, next: CallHandler): Observable<any> {
+  intercept(
+    context: NestExecutionContext,
+    next: CallHandler,
+  ): Observable<unknown> {
+    // Fallback gracefully if not an HTTP request (e.g., GraphQL, RPC, Microservices)
+    if (context.getType() !== 'http') {
+      return next.handle();
+    }
+
     const http = context.switchToHttp();
     const request = http.getRequest<FastifyRequest>();
 
-    const baseContext: ExecutionContext = {
-      requestId: randomUUID(),
+    // Extract raw identifiers from headers (no validation or auth logic )
+    const requestId =
+      (request.headers['x-request-id'] as string) || randomUUID();
+    const actorType = (request.headers['x-actor-type'] as ActorType) || 'user';
+    const actorId = request.headers['x-actor-id'] as string | undefined;
+    const tenantId = request.headers['x-tenant-id'] as string | undefined;
+
+    // Initialize the base context with extracted values and defaults
+    const baseContext: AppRequestContext = {
+      requestId,
       timestamp: Date.now(),
 
       actor: {
-        type: 'system',
+        type: actorType,
+        id: actorId,
       },
+
+      tenant: tenantId ? { id: tenantId } : undefined,
 
       capabilities: [],
 
@@ -32,16 +51,25 @@ export class ContextInterceptor implements NestInterceptor {
       },
     };
 
+    // Boot up the AsyncLocalStorage context for this request lifecycle
+    // Wrap execution natively without breaking RxJS streaming or LLM token streaming
     return new Observable((subscriber) => {
-      ContextStore.run(baseContext, async () => {
-        try {
-          const result = await next.handle().toPromise();
-          subscriber.next(result);
-          subscriber.complete();
-        } catch (err) {
-          subscriber.error(err);
-        }
+      let subscription: Subscription | undefined;
+      ContextStore.run(baseContext, () => {
+        const source$ = next.handle();
+
+        subscription = source$.subscribe({
+          next: (value) => subscriber.next(value),
+          error: (err) => subscriber.error(err),
+          complete: () => subscriber.complete(),
+        });
       });
+
+      return () => {
+        if (subscription) {
+          subscription.unsubscribe();
+        }
+      };
     });
   }
 }

@@ -9,6 +9,8 @@ import { SystemLoggingInterceptor } from './core/interceptors/logging.intercepto
 import { GlobalHttpExceptionFilter } from './common/filters/http-exception.filter';
 import { RedisModule } from './core/redis/redis.module';
 import { ContextModule } from './common/context/context.module';
+import { ContextStore } from './common/context/context.store';
+import { ContextInterceptor } from './common/context/context.interceptor';
 
 @Module({
   imports: [
@@ -21,6 +23,18 @@ import { ContextModule } from './common/context/context.module';
         return {
           pinoHttp: {
             level: isProduction ? 'info' : 'debug',
+            // Mix identity details into the Pino footprint
+            mix: () => {
+              const ctx = ContextStore.getOptional();
+              if (!ctx) return {};
+              return {
+                requestId: ctx.requestId,
+                tenantId: ctx.tenant?.id,
+                actorType: ctx.actor.type,
+                actorId: ctx.actor.id,
+                planTier: ctx.plan?.tier,
+              };
+            },
             transport: !isProduction
               ? {
                   target: 'pino-pretty',
@@ -41,6 +55,10 @@ import { ContextModule } from './common/context/context.module';
   controllers: [AppController],
   providers: [
     AppService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ContextInterceptor,
+    },
     { provide: APP_INTERCEPTOR, useClass: SystemLoggingInterceptor },
     {
       provide: APP_FILTER,

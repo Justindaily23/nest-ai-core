@@ -1,25 +1,40 @@
 import { Injectable } from '@nestjs/common';
 import { ContextStore } from './context.store';
-import { ExecutionContext } from './execution-context';
+import { AppRequestContext, SystemCapability } from './execution-context';
 
 @Injectable()
 export class ContextService {
-  get(): ExecutionContext {
+  // Safe getter for mandotry contet paths
+  get(): AppRequestContext {
     return ContextStore.get();
   }
 
-  setActor(type: ExecutionContext['actor']['type'], id?: string) {
-    const ctx = ContextStore.get();
+  // safely returns context for or undefined for background routines
+  getOptional(): AppRequestContext | undefined {
+    return ContextStore.getOptional();
+  }
+
+  /**
+   * Updates the actor property on the active context reference safely.
+   */
+  setActor(type: AppRequestContext['actor']['type'], id?: string): void {
+    const ctx = this.get();
     ctx.actor = { type, id };
   }
 
-  setTenant(id: string) {
-    const ctx = ContextStore.get();
+  /**
+   * Updates the tenant property on the active context reference safely.
+   */
+  setTenant(id: string): void {
+    const ctx = this.get();
     ctx.tenant = { id };
   }
 
-  addCapability(capability: string) {
-    const ctx = ContextStore.get();
+  /**
+   * Appends a type-safe system capability to the current request lifecycle.
+   */
+  addCapability(capability: SystemCapability): void {
+    const ctx = this.get();
     if (!ctx.capabilities.includes(capability)) {
       ctx.capabilities.push(capability);
     }
