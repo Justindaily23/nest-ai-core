@@ -29,7 +29,7 @@ export interface AIChatOptions {
  */
 export interface AIChatRequest {
   readonly provider: AIProviderName;
-  readonly model: string;
+  readonly model: string; // specific model identifier (e.g., 'gpt-4', 'claude-2')
   readonly messages: readonly AIMessage[];
   readonly options?: AIChatOptions;
 }

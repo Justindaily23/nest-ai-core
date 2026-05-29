@@ -36,7 +36,7 @@ export interface AppRequestContext {
     };
   };
 
-  capabilities: string[]; // e.g., ['canUseAdvancedModel', 'canAccessBetaFeatures']
+  capabilities: SystemCapability[]; // e.g., ['canUseAdvancedModel', 'canAccessBetaFeatures']
 
   source: {
     readonly ip?: string;

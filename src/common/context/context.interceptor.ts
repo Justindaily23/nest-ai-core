@@ -45,6 +45,15 @@ export class ContextInterceptor implements NestInterceptor {
 
       capabilities: [],
 
+      plan: {
+        tier: 'free' as PlanTier,
+        hardLimits: {
+          requestPerMinute: 60,
+          tokenPerMonth: 100_000,
+          maxTokenPerRequest: 2_000,
+        },
+      },
+
       source: {
         ip: request.ip,
         userAgent: request.headers['user-agent'],

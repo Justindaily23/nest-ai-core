@@ -129,14 +129,19 @@ export class AIExecutor {
     fn: () => Promise<T>,
     timeoutMs: number,
   ): Promise<T> {
-    return Promise.race([
-      fn(),
-      new Promise<T>((_, reject) =>
-        setTimeout(
-          () => reject(new Error(`AI request timed out after ${timeoutMs}ms`)),
-          timeoutMs,
-        ),
-      ),
-    ]);
+    let timerId: NodeJS.Timeout;
+
+    const timeOutPromise = new Promise<never>((_, reject) => {
+      timerId = setTimeout(
+        () => reject(new Error(`AI request timed out after ${timeoutMs}ms`)),
+        timeoutMs,
+      );
+    });
+
+    try {
+      return Promise.race([fn(), timeOutPromise]);
+    } finally {
+      clearTimeout(timerId!); // Prevents memory leaks by freazing up the event loop instance after completion or error
+    }
   }
 }

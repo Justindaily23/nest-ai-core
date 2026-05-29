@@ -24,7 +24,7 @@ export class AIProviderRegistry {
       throw new OperationalException(
         'system',
         'AI_PROVIDER_NOT_REGISTERED',
-        `AI provider ${name} is not regsitered in the system.`,
+        `AI provider ${name} is not registered in the system.`,
         500,
       );
     }
