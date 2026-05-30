@@ -1,5 +1,5 @@
 import * as Joi from 'joi';
-import { LlmProvider } from '../enums/LLM/llm-provider.enum';
+import { LlmProvider } from '@/common/enums/llm-provider.enum';
 
 export const envValidationSchema = Joi.object({
   NODE_ENV: Joi.string()

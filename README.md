@@ -2,10 +2,6 @@
 
 A production-grade, highly resilient backend infrastructure engine designed for secure, multi-tenant enterprise AI integrations. Built using NestJS, TypeScript, PostgreSQL, and Redis.
 
-[![NestJS](https://shields.io)](https://nestjs.com)
-[![TypeScript](https://shields.io)](https://typescriptlang.org)
-[![License: MIT](https://shields.io)](https://opensource.org)
-
 ---
 
 ## Architectural Core Intent
@@ -69,6 +65,37 @@ This system enforces hard operational guarantees at the transport and applicatio
 - **Centralized exception filtering** normalizes all runtime and transport errors into predictable API responses while preserving internal observability signals.
 
 These boundaries ensure that dropped clients, upstream AI instability, or degraded dependencies cannot silently exhaust server resources.
+
+## Execution Context & Trust Boundaries
+
+_Inside of src/common/context_
+
+All inbound requests — whether originating from HTTP controllers, internal services, background workers, or scheduled jobs — are executed under a strict, immutable `AppRequestContext`.
+
+This context acts as the system’s execution passport and defines:
+
+- Actor identity (human, system, or service)
+- Tenant ownership and isolation boundaries
+- Subscription tier and enforced hard limits
+- Explicit system capabilities (feature and model access)
+- Telemetry and audit metadata
+
+No module is permitted to infer or fabricate execution context.
+Context is propagated, narrowed, or enforced — never mutated.
+
+This guarantees consistent authorization, billing enforcement, and observability across synchronous and asynchronous execution paths.
+
+## Workers & Asynchronous Execution Model
+
+Background workers are treated as first-class execution environments, not secondary pipelines.
+
+Workers:
+
+- Never bypass authorization, cost limits, or tenant isolation
+- Always receive a serialized execution context alongside job payloads
+- Execute the same provider-agnostic AI contracts as synchronous requests
+
+This guarantees parity between real-time API traffic and deferred or long-running workloads.
 
 ## Tech Stack Foundations
 
