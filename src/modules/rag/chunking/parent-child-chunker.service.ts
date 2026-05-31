@@ -17,7 +17,7 @@
  *   5. tenantId is embedded in every ID and every chunk for multi-tenant isolation.
  */
 
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { type Tokenizer } from '../tokenization/interfaces/tokenizer.interface';
 import { ChunkingStrategy } from './interfaces/chunking-strategy.interface';
@@ -31,6 +31,7 @@ import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 @Injectable()
 export class ParentChildChunkerService {
   constructor(
+    @Inject('TOKENIZER_PROVIDER')
     private readonly tokenizer: Tokenizer,
     @InjectPinoLogger(ParentChildChunkerService.name)
     private readonly logger: PinoLogger,
@@ -89,7 +90,7 @@ export class ParentChildChunkerService {
         parentOverlapSize: strategy.parentOverlapSize,
         msg: 'Invalid strategy: parentChunkSize must be strictly greater than parentOverlapSize.',
       });
-      throw new Error('CHUNKING_STRATEGY_INVALID');
+      throw new RangeError('CHUNKING_STRATEGY_INVALID');
     }
 
     this.logger.debug({
