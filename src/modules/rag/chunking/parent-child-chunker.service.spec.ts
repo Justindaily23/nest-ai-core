@@ -19,8 +19,8 @@ import { PinoLogger } from 'nestjs-pino';
 import * as fc from 'fast-check';
 import { ParentChildChunkerService } from './parent-child-chunker.service';
 import { Tokenizer } from '../tokenization/interfaces/tokenizer.interface';
-import { ChunkRole } from '@/common/enums/chunk-role.enum';
 import { ChunkingStrategy } from './interfaces/chunking-strategy.interface';
+import { getLoggerToken } from 'nestjs-pino';
 
 // ---------------------------------------------------------------------------
 // Shared test doubles
@@ -70,8 +70,12 @@ const BASE_STRATEGY: ChunkingStrategy = {
 
 // Pre-computed content lengths scaled to BASE_STRATEGY window sizes.
 // With the 1-char-per-token mock: 1 char = 1 token.
-const CONTENT_MULTI_PARENT = 'a'.repeat(2500); // produces 3 parents
-const CONTENT_SINGLE_PARENT = 'a'.repeat(800); // fits in one parent
+const CONTENT_MULTI_PARENT = Array.from({ length: 2500 }, (_, i) =>
+  String.fromCharCode(97 + (i % 26)),
+).join('');
+const CONTENT_SINGLE_PARENT = Array.from({ length: 800 }, (_, i) =>
+  String.fromCharCode(97 + (i % 26)),
+).join(''); // fits in one parent
 
 /**
  * Builds a mock PinoLogger with jest spies on all log-level methods.
@@ -97,7 +101,10 @@ async function buildService(
     providers: [
       ParentChildChunkerService,
       { provide: 'TOKENIZER_PROVIDER', useValue: tokenizer },
-      { provide: PinoLogger, useValue: logger },
+      {
+        provide: getLoggerToken(ParentChildChunkerService.name),
+        useValue: logger,
+      },
     ],
   }).compile();
 
@@ -680,7 +687,10 @@ describe('ParentChildChunkerService — Integration (real tokenizer)', () => {
       providers: [
         ParentChildChunkerService,
         { provide: 'TOKENIZER_PROVIDER', useClass: TiktokenTokenizer },
-        { provide: PinoLogger, useValue: logger },
+        {
+          provide: getLoggerToken(ParentChildChunkerService.name),
+          useValue: logger,
+        },
       ],
     }).compile();
     service = module.get(ParentChildChunkerService);
@@ -701,7 +711,8 @@ describe('ParentChildChunkerService — Integration (real tokenizer)', () => {
   });
 
   it('content spanning a parent boundary appears in the overlap seam of both parents', () => {
-    const content = 'word '.repeat(30); // ~120 chars — forces multiple parents
+    // 🏆 Change 30 to 1500 right here!
+    const content = 'word '.repeat(1500);
 
     const { parents } = service.execute(
       't1',

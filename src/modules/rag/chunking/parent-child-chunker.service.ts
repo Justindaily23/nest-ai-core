@@ -11,8 +11,9 @@
  *   2. Parent IDs are derived from their absolute token offset, not a mutable
  *      sequence counter, so IDs remain stable across re-ingestion even if
  *      strategy parameters change.
- *   3. Child IDs are derived from their absolute document token position for
- *      the same stability guarantee.
+ *   3. Child IDs are scoped by parentId + absoluteChildStart to guarantee
+ *      uniqueness even when parent overlap causes two children across different
+ *      parents to share the same absolute token offset.
  *   4. All chunks carry full token offset metadata for source highlighting.
  *   5. tenantId is embedded in every ID and every chunk for multi-tenant isolation.
  */
@@ -24,7 +25,7 @@ import { ChunkingStrategy } from './interfaces/chunking-strategy.interface';
 import { ChunkingResult } from './types/chunking-result.type';
 import { ParentChunk } from './types/parent-chunk.type';
 import { ChildChunk } from './types/child-chunk.type';
-import { ChunkRole } from '@/common/enums/chunk-role.enum';
+import { ChunkRole } from '../../../common/enums/chunk-role.enum';
 import { DEFAULT_STRATEGY } from './constants/chunking-strategy.constant';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 
@@ -108,7 +109,11 @@ export class ParentChildChunkerService {
     // IDs are stable: re-ingesting the same document with the same strategy always
     // produces the same IDs, enabling safe vector store upserts.
     //
-    // Child IDs use their absolute document start token for the same reason.
+    // Child IDs are scoped by parentId + absoluteChildStart. Scoping by parentId
+    // alone is not sufficient (different parents can share a parentId derivation
+    // path in theory), and scoping by absoluteChildStart alone is not sufficient
+    // because parent overlap causes children across adjacent parents to share the
+    // same absolute start offset. Both components together guarantee uniqueness.
 
     let parentSequence = 0;
 
@@ -125,10 +130,9 @@ export class ParentChildChunkerService {
       const parentContent = this.tokenizer.decode(parentTokens);
 
       // Stable ID: keyed on absolute token offset, not sequence number.
-      const parentId = this.createDeterministicId(
+      const parentId = this.createParentId(
         tenantId,
         documentId,
-        ChunkRole.PARENT,
         parentStartOffset,
       );
 
@@ -166,11 +170,17 @@ export class ParentChildChunkerService {
         const absoluteChildStart = parentStartOffset + localChildStart;
         const absoluteChildEnd = parentStartOffset + localChildEnd;
 
-        // Stable ID: keyed on absolute document token position.
-        const childId = this.createDeterministicId(
+        // Stable ID: scoped by parentId + absoluteChildStart.
+        // parentId alone does not differentiate siblings.
+        // absoluteChildStart alone collides when parent overlap causes two children
+        // across adjacent parents to share the same absolute token offset.
+        // Together they are always unique within a tenant + document.
+        // Child IDs must be unique across overlapping parents.
+        // Identity = (parentStartOffset, localChildStart)
+        const childId = this.createChildId(
           tenantId,
           documentId,
-          ChunkRole.CHILD,
+          parentId,
           absoluteChildStart,
         );
 
@@ -179,7 +189,7 @@ export class ParentChildChunkerService {
           parentId,
           tenantId,
           documentId,
-          sequence: children.length, // monotonic; read after push avoids a counter variable
+          sequence: children.length, // monotonic; read before push would be off-by-one
           content: this.tokenizer.decode(childTokens),
           tokenCount: childTokens.length,
           metadata: {
@@ -221,22 +231,43 @@ export class ParentChildChunkerService {
   }
 
   /**
-   * Produces a collision-resistant, stable chunk ID.
+   * Produces a stable, collision-resistant ID for a ParentChunk.
    *
-   * The `position` argument must be an absolute token offset (not a mutable
-   * Stable across repeated ingestion of the same document when the chunking strategy remains unchanged.
-   *  ingestion runs and remain safe for vector store upsert operations.
-   *
-   * Scoping by tenantId guarantees isolation within shared database indexes.
+   * Keyed on absolute token offset rather than a mutable sequence counter,
+   * so IDs survive re-ingestion and strategy parameter changes.
+   * Scoped by tenantId for multi-tenant isolation in shared vector indexes.
    */
-  private createDeterministicId(
+  private createParentId(
     tenantId: string,
     documentId: string,
-    role: ChunkRole,
-    position: number,
+    parentStartOffset: number,
   ): string {
     return createHash('sha256')
-      .update(`${tenantId}:${documentId}:${role}:${position}`)
+      .update(
+        `${tenantId}:${documentId}:${ChunkRole.PARENT}:${parentStartOffset}`,
+      )
+      .digest('hex');
+  }
+
+  /**
+   * Produces a stable, collision-resistant ID for a ChildChunk.
+   *
+   * Scoped by parentId + absoluteChildStart. Neither component alone is sufficient:
+   * - parentId alone does not differentiate sibling children within the same parent.
+   * - absoluteChildStart alone collides when parent overlap places two children from
+   *   adjacent parents at the same absolute document token offset.
+   * Together they are always unique within a tenant + document.
+   */
+  private createChildId(
+    tenantId: string,
+    documentId: string,
+    parentId: string,
+    absoluteChildStart: number,
+  ): string {
+    return createHash('sha256')
+      .update(
+        `${tenantId}:${documentId}:${ChunkRole.CHILD}:${parentId}:${absoluteChildStart}`,
+      )
       .digest('hex');
   }
 }
