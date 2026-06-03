@@ -49,7 +49,13 @@ export class TiktokenTokenizer implements Tokenizer, BeforeApplicationShutdown {
   decode(tokens: number[]): string {
     const uint32Array = new Uint32Array(tokens);
     const rawBytes = this.encoder.decode(uint32Array);
-    return this.textDecoder.decode(rawBytes);
+    /**
+     * Thread-safe, standard utility instance for reliable byte-to-string extraction.
+     * Eliminates character-boundary corruption on multi-byte characters like emojis or non-English scripts.
+     *     Instantiated per call — prevents incomplete byte state from one chunk
+     *     leaking into the next decode call through shared TextDecoder state.
+     */
+    return new TextDecoder('utf-8', { fatal: false }).decode(rawBytes);
   }
 
   /**

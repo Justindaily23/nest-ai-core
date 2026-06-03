@@ -55,6 +55,7 @@ export class ParentChildChunkerService {
   ): ChunkingResult {
     const parents: ParentChunk[] = [];
     const children: ChildChunk[] = [];
+    const seenChildRanges = new Map<string, string>();
 
     // --- PHASE 1: ENCODE ---
     const tokens = this.tokenizer.encode(content);
@@ -169,6 +170,16 @@ export class ParentChildChunkerService {
 
         const absoluteChildStart = parentStartOffset + localChildStart;
         const absoluteChildEnd = parentStartOffset + localChildEnd;
+        const rangeKey = `${absoluteChildStart}:${absoluteChildEnd}`;
+
+        // FIX: Check deduplication map before declaring childId or processing the chunk
+        if (seenChildRanges.has(rangeKey)) {
+          // If we hit the boundary seam limit, check for termination before skipping
+          if (localChildEnd >= parentTokens.length) {
+            break;
+          }
+          continue;
+        }
 
         // Stable ID: scoped by parentId + absoluteChildStart.
         // parentId alone does not differentiate siblings.
@@ -183,6 +194,9 @@ export class ParentChildChunkerService {
           parentId,
           absoluteChildStart,
         );
+
+        // Register range into the deduplication map
+        seenChildRanges.set(rangeKey, childId);
 
         const childChunk: ChildChunk = {
           id: childId,
@@ -202,8 +216,7 @@ export class ParentChildChunkerService {
         children.push(childChunk);
 
         // Terminate once the window has consumed the full parent slice.
-        // Advancing localChildStart past this point would produce a duplicate
-        // of the final boundary chunk on the next iteration.
+
         if (localChildEnd >= parentTokens.length) {
           break;
         }
