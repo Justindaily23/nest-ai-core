@@ -5,7 +5,7 @@ import { TokenizerService } from './tokenizer.service';
 @Module({
   providers: [
     {
-      // Tie the interface provider token directly to your high-performance implementation class
+      // Tie the interface provider token directly to the high-performance implementation class
       provide: 'TOKENIZER_PROVIDER',
       useClass: TiktokenTokenizer,
     },

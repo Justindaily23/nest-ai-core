@@ -38,8 +38,8 @@ export interface CanonicalChunk {
   readonly position: number;
 
   /** Self-referencing structural link. If this is a CHILD chunk, this MUST point to its PARENT chunkId. */
-  readonly parentChunkId?: string;
+  readonly parentChunkId?: string | null;
 
   /** Dynamic field-level tracking data (e.g., page numbers, table headers, or industry markers). */
-  readonly metadata?: Record<string, unknown>;
+  readonly metadata?: Record<string, unknown> | null;
 }

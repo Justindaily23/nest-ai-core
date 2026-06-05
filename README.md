@@ -46,6 +46,7 @@ Most AI software integrations fail in production due to vendor lock-in, loose da
 ### 2. Privacy-Centric, Access-Controlled RAG
 
 - **Engineering Reality:** Ingested corporate knowledge files are deterministically chunked, transformed to vector coordinates, and mapped within an internal PostgreSQL database leveraging the `pgvector` extension. Retrieval engines enforce strict Role-Based Access Control (RBAC) prior to spatial search execution.
+- Deterministic parent/child chunk persistence is enforced prior to vector embedding.
 - **Business Outcome:** Complete compliance with local regulations (such as the Nigeria Data Protection Act - NDPA). Sensitive data is structurally cordoned off—unauthorized actors cannot manipulate prompt vectors to peek at privileged corporate records.
 
 ### 3. Industrial Shock Absorption & Cost Containment
@@ -63,6 +64,7 @@ This system enforces hard operational guarantees at the transport and applicatio
 - **Structured system logging** is handled via `nestjs-pino`, separating baseline HTTP telemetry from higher-level business and AI metrics.
 - **Global execution interceptors** track request lifecycles and execution latency without interfering with Fastify’s transport controls.
 - **Centralized exception filtering** normalizes all runtime and transport errors into predictable API responses while preserving internal observability signals.
+- - Core ingestion, chunking, and persistence layers are unit-tested before database integration.
 
 These boundaries ensure that dropped clients, upstream AI instability, or degraded dependencies cannot silently exhaust server resources.
 
@@ -104,6 +106,7 @@ This guarantees parity between real-time API traffic and deferred or long-runnin
 - **Relational Storage:** PostgreSQL (System of Record)
 - **In-Memory Buffer / Queue Manager:** Redis / BullMQ
 - **Vector Engine:** PgVector Extension
+- **Query Builder:** Kysely (type-safe SQL, no ORM abstraction leakage)
 
 ---
 
