@@ -30,6 +30,10 @@ CREATE INDEX idx_embeddings_tenant ON chunk_embeddings (tenant_id);
 -- Links database text fetches cleanly back to vector targets.
 CREATE INDEX idx_embeddings_chunk ON chunk_embeddings (chunk_id);
 
+-- Prevent duplicate embeddings for the same chunk + model pair
+CREATE UNIQUE INDEX idx_embeddings_chunk_model
+  ON chunk_embeddings (chunk_id, model);
+
 -- SCALING SEARCH INDEX (Configured here via IVFFlat for basic batch validation)
 -- Note: Re-evaluate this into a CONCURRENT HNSW graph index during Phase 3.7 scale-up.
 CREATE INDEX idx_embeddings_vector 

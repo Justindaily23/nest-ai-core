@@ -1,18 +1,67 @@
 import { Injectable } from '@nestjs/common';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { DatabaseService } from '@/core/database/database.service';
-import { CreateChunkParams } from '../interfaces/chunk-repository.interface';
+import { CreateChunkParams } from './interfaces/chunk-repository.interface';
+import { OperationalException } from '@/common/exceptions/operational.exception';
+import { sql } from 'kysely';
 
 @Injectable()
 export class ChunkRepository {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    @InjectPinoLogger(ChunkRepository.name)
+    private readonly logger: PinoLogger,
+  ) {}
 
+  /**
+   * Atomically persists a batch of Parent and Child chunks for a single document.
+   *
+   * Design guarantees:
+   *   - Verifies the parent document exists and belongs to the tenant before writing.
+   *   - All chunks are written in a single transaction — partial writes cannot occur.
+   *   - Upserts on ID conflict — safe for re-ingestion without duplicate rows.
+   *   - Chunks are immutable by design; only content, token_count, position,
+   *     and metadata are updated on conflict (no updated_at — chunks don't mutate).
+   */
   async insertMany(chunks: CreateChunkParams[]): Promise<void> {
+    // Nothing to persist; exit cleanly without touching the database.
     if (chunks.length === 0) return;
 
-    await this.db.client
-      .insertInto('chunks')
-      .values(
-        chunks.map((chunk) => ({
+    // Pull context from the first chunk for structured logging and validation.
+    // All chunks in a batch share the same tenantId and sourceId by contract.
+    const { tenantId, sourceId } = chunks[0];
+
+    try {
+      await this.db.client.transaction().execute(async (trx) => {
+        // --- STEP 1: PARENT DOCUMENT VALIDATION ---
+        // Verify the parent document exists and is scoped to this tenant
+        // before writing any chunks. Prevents orphaned chunk records and
+        // enforces the FK constraint at the application layer before hitting
+        // the database constraint — giving us a clean error code to work with.
+        const documentExists = await trx
+          .selectFrom('documents')
+          .select('id')
+          .where('id', '=', sourceId)
+          .where('tenant_id', '=', tenantId)
+          .executeTakeFirst();
+
+        if (!documentExists) {
+          // Throw a structured domain error — not a raw string — so the
+          // catch block can wrap it in OperationalException with full context.
+          throw new OperationalException(
+            'database',
+            'CHUNK_PARENT_DOCUMENT_NOT_FOUND',
+            'Parent document not found for tenant.',
+            undefined,
+            { sourceId, tenantId },
+          );
+        }
+
+        // --- STEP 2: MAP CHUNK PARAMS TO DATABASE COLUMNS ---
+        // Transform the domain params into the exact column shape Kysely expects.
+        // metadata is serialised to JSON string — Kysely does not auto-serialise JSONB.
+        // parentChunkId is null for Parent chunks, a hash string for Child chunks.
+        const values = chunks.map((chunk) => ({
           id: chunk.id,
           tenant_id: chunk.tenantId,
           source_id: chunk.sourceId,
@@ -22,8 +71,64 @@ export class ChunkRepository {
           position: chunk.position,
           parent_chunk_id: chunk.parentChunkId ?? null,
           metadata: chunk.metadata ? JSON.stringify(chunk.metadata) : null,
-        })),
-      )
-      .execute();
+        }));
+
+        // --- STEP 3: BATCH UPSERT ---
+        // Insert all chunks in a single statement.
+        // ON CONFLICT (id): re-ingesting the same document with the same strategy
+        // produces the same deterministic IDs — upsert ensures idempotency instead
+        // of a unique constraint violation crash.
+        // EXCLUDED references the row that was rejected by the conflict —
+        // i.e. the new incoming values we want to keep.
+        await trx
+          .insertInto('chunks')
+          .values(values)
+          .onConflict((oc) =>
+            oc.column('id').doUpdateSet({
+              content: sql`EXCLUDED.content`,
+              token_count: sql`EXCLUDED.token_count`,
+              position: sql`EXCLUDED.position`,
+              metadata: sql`EXCLUDED.metadata`,
+            }),
+          )
+          .execute();
+      });
+    } catch (error) {
+      // --- ERROR BOUNDARY ---
+      // The transaction callback throws on any failure — Kysely automatically
+      // rolls back the transaction before control reaches here, so no partial
+      // writes can exist in the database at this point.
+      //
+      // If the error is already an OperationalException (e.g. document not found),
+      // log it and rethrow as-is — it already carries the correct code and context.
+      // Otherwise wrap the raw database error so no Kysely/pg internals leak upward.
+      if (error instanceof OperationalException) {
+        this.logger.error({
+          tenantId,
+          sourceId,
+          chunkCount: chunks.length,
+          code: error.code,
+          err: error,
+          msg: 'Chunk batch transaction aborted.',
+        });
+        throw error;
+      }
+
+      this.logger.error({
+        tenantId,
+        sourceId,
+        chunkCount: chunks.length,
+        err: error,
+        msg: 'Transaction failed: Unable to batch insert chunks safely.',
+      });
+
+      throw new OperationalException(
+        'database',
+        'CHUNK_INSERT_FAILED',
+        'Failed to persist chunk batch.',
+        undefined,
+        error,
+      );
+    }
   }
 }

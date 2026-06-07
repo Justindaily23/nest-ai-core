@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '@core/database/database.service';
-import { CreateDocumentParams } from '../interfaces/document-repository.interface';
+import { CreateDocumentParams } from './interfaces/document-repository.interface';
 
 @Injectable()
 export class DocumentRepository {
