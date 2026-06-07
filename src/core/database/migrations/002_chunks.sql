@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS chunks (
     tenant_id UUID NOT NULL,
     
     -- Hard reference to source file. Deleting a document instantly wipes its chunks.
-    document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    source_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
     
     -- System discriminator role checking semantic assignments.
     role TEXT NOT NULL CHECK (role IN ('PARENT', 'CHILD')),
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS chunks (
 CREATE INDEX idx_chunks_tenant ON chunks (tenant_id);
 
 -- Optimizes hierarchical context lookups by sorting matching text slices instantly.
-CREATE INDEX idx_chunks_document ON chunks (document_id, role, position);
+CREATE INDEX idx_chunks_source ON chunks (source_id, role, position);
 
 -- Optimizes child-to-parent graph lookup scans while ignoring parent rows.
 CREATE INDEX idx_chunks_parent ON chunks (parent_chunk_id) WHERE parent_chunk_id IS NOT NULL;

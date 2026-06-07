@@ -8,17 +8,16 @@
 --   3. Strict multi-tenant isolation boundaries are enforced on every table.
 -- ===========================================================================
 
--- 🚨 SYSTEM PRE-REQUISITE: Initialize the open-source vector mathematics extension.
+-- SYSTEM PRE-REQUISITE: Initialize the open-source vector mathematics extension.
 CREATE EXTENSION IF NOT EXISTS vector;
 
 -- ---------------------------------------------------------------------------
--- 1. DOCUMENTS TABLE: Immutable Ingestion Anchors
+-- DOCUMENTS TABLE: Immutable Ingestion Anchors
 -- ---------------------------------------------------------------------------
 -- Represents the raw file source tracker produced by ingestion codecs.
 -- No embedding data is ever stored at this tier.
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS documents (
-    -- Unique identifier using standard UUID machine codes.
     id UUID PRIMARY KEY,
     
     -- Mandatory tenant segregation anchor. Prevents customer data cross-contamination.
