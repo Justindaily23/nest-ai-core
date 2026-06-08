@@ -32,7 +32,11 @@ CREATE TABLE IF NOT EXISTS chunks (
     -- Generic field bag storing local parent page maps or document tables headers.
     metadata JSONB,
     
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+       -- Exposes the composite key required by the downstream embedding layer.
+    CONSTRAINT uq_chunks_id_tenant UNIQUE (id, tenant_id)
+    
 );
 
 -- INDEXES: Chunk Layer Optimization

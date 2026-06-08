@@ -14,9 +14,9 @@ export class EmbeddingRepository {
   ) {}
 
   async upsert(params: CreateEmbeddingParams): Promise<void> {
-    // pgvector expects single string literal. We convert the number array into a string format that can be cast to vector in SQL.
-    // standard text representation that postgres expects for vector types
+    // Generate the standard bracketed string notation for pgvector type casting
     const vectorLiteral = `[${params.embedding.join(',')}]`;
+    const vectorSql = sql`${vectorLiteral}::vector`;
 
     try {
       await this.db.client
@@ -25,11 +25,11 @@ export class EmbeddingRepository {
           tenant_id: params.tenantId,
           chunk_id: params.chunkId,
           model: params.model,
-          embedding: sql`${vectorLiteral}::vector`,
+          embedding: vectorSql,
         })
         .onConflict((oc) =>
-          oc.columns(['chunk_id', 'model']).doUpdateSet({
-            embedding: sql`${vectorLiteral}::vector`,
+          oc.columns(['tenant_id', 'chunk_id', 'model']).doUpdateSet({
+            embedding: vectorSql,
             created_at: sql`NOW()`,
           }),
         )
