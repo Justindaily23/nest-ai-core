@@ -1,6 +1,13 @@
 import { HttpStatus } from '@nestjs/common';
 
-export type ErrorSystem = 'redis' | 'database' | 'llm' | 'auth' | 'system';
+export type ErrorSystem =
+  | 'redis'
+  | 'database'
+  | 'llm'
+  | 'auth'
+  | 'system'
+  | 'validation'
+  | string; // Extendable for other systems as needed
 
 export class OperationalException extends Error {
   public readonly timestamp: string;

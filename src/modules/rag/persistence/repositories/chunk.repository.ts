@@ -4,6 +4,7 @@ import { DatabaseService } from '@/core/database/database.service';
 import { CreateChunkParams } from './interfaces/chunk-repository.interface';
 import { OperationalException } from '@/common/exceptions/operational.exception';
 import { sql } from 'kysely';
+import { ChunkRole } from '@/common/enums/chunk-role.enum';
 
 @Injectable()
 export class ChunkRepository {
@@ -33,7 +34,7 @@ export class ChunkRepository {
 
     try {
       await this.db.client.transaction().execute(async (trx) => {
-        // --- STEP 1: PARENT DOCUMENT VALIDATION ---
+        // PARENT DOCUMENT VALIDATION ---
         // Verify the parent document exists and is scoped to this tenant
         // before writing any chunks. Prevents orphaned chunk records and
         // enforces the FK constraint at the application layer before hitting
@@ -57,7 +58,7 @@ export class ChunkRepository {
           );
         }
 
-        // --- STEP 2: MAP CHUNK PARAMS TO DATABASE COLUMNS ---
+        // MAP CHUNK PARAMS TO DATABASE COLUMNS ---
         // Transform the domain params into the exact column shape Kysely expects.
         // metadata is serialised to JSON string — Kysely does not auto-serialise JSONB.
         // parentChunkId is null for Parent chunks, a hash string for Child chunks.
@@ -73,7 +74,7 @@ export class ChunkRepository {
           metadata: chunk.metadata ? JSON.stringify(chunk.metadata) : null,
         }));
 
-        // --- STEP 3: BATCH UPSERT ---
+        // BATCH UPSERT ---
         // Insert all chunks in a single statement.
         // ON CONFLICT (id): re-ingesting the same document with the same strategy
         // produces the same deterministic IDs — upsert ensures idempotency instead
@@ -84,7 +85,7 @@ export class ChunkRepository {
           .insertInto('chunks')
           .values(values)
           .onConflict((oc) =>
-            oc.column('id').doUpdateSet({
+            oc.columns(['id', 'tenant_id']).doUpdateSet({
               content: sql`EXCLUDED.content`,
               token_count: sql`EXCLUDED.token_count`,
               position: sql`EXCLUDED.position`,
@@ -130,5 +131,46 @@ export class ChunkRepository {
         error,
       );
     }
+  }
+
+  async findByIds(
+    tenantId: string,
+    ids: string[],
+  ): Promise<{ id: string; content: string }[]> {
+    if (ids.length === 0) return [];
+
+    return this.db.client
+      .selectFrom('chunks')
+      .select(['id', 'content'])
+      .where('tenant_id', '=', tenantId)
+      .where('id', 'in', ids)
+      .execute();
+  }
+
+  async findParentsWithChildren(
+    tenantId: string,
+    childChunkIds: string[],
+  ): Promise<
+    {
+      parentId: string;
+      parentContent: string;
+      childId: string;
+      childContent: string;
+    }[]
+  > {
+    return this.db.client
+      .selectFrom('chunks as child')
+      .innerJoin('chunks as parent', 'parent.id', 'child.parent_chunk_id')
+      .select([
+        'parent.id as parentId',
+        'parent.content as parentContent',
+        'child.id as childId',
+        'child.content as childContent',
+      ])
+      .where('child.tenant_id', '=', tenantId)
+      .where('parent.tenant_id', '=', tenantId)
+      .where('child.role', '=', ChunkRole.CHILD)
+      .where('child.id', 'in', childChunkIds)
+      .execute();
   }
 }

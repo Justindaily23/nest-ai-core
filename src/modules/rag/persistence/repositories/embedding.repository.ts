@@ -14,7 +14,20 @@ export class EmbeddingRepository {
   ) {}
 
   async upsert(params: CreateEmbeddingParams): Promise<void> {
-    // Generate the standard bracketed string notation for pgvector type casting
+    // Guard: empty vectors produce silent pgvector errors and waste a DB round-trip.
+    // Fail immediately with a structured code so ingestion bugs surface at the source.
+    if (!params.embedding || params.embedding.length === 0) {
+      throw new OperationalException(
+        'validation',
+        'EMPTY_EMBEDDING_VECTOR',
+        'Embedding vector cannot be empty.',
+        undefined,
+        { chunkId: params.chunkId, model: params.model },
+      );
+    }
+
+    // Single string literal bind parameter — avoids per-dimension SQL interpolation
+    // that bloats query strings and stresses the pg wire protocol at scale.
     const vectorLiteral = `[${params.embedding.join(',')}]`;
     const vectorSql = sql`${vectorLiteral}::vector`;
 
@@ -30,7 +43,6 @@ export class EmbeddingRepository {
         .onConflict((oc) =>
           oc.columns(['tenant_id', 'chunk_id', 'model']).doUpdateSet({
             embedding: vectorSql,
-            created_at: sql`NOW()`,
           }),
         )
         .execute();
