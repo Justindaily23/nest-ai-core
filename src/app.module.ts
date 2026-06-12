@@ -11,6 +11,11 @@ import { RedisModule } from './core/redis/redis.module';
 import { ContextModule } from './common/context/context.module';
 import { ContextStore } from './common/context/context.store';
 import { ContextInterceptor } from './common/context/context.interceptor';
+import { ContextAssemblyModule } from './modules/rag/context-assembly/context-assembly.module';
+import { TokenizationModule } from './modules/rag/tokenization/tokenization.module';
+import { PersistenceModule } from './modules/rag/persistence/persistence.module';
+import { ChunkingModule } from './modules/rag/chunking/chunking.module';
+import { RetrievalModule } from './modules/rag/retrieval/retrieval.module';
 
 @Module({
   imports: [
@@ -51,6 +56,11 @@ import { ContextInterceptor } from './common/context/context.interceptor';
     }),
     RedisModule,
     ContextModule,
+    ContextAssemblyModule,
+    TokenizationModule,
+    PersistenceModule,
+    ChunkingModule,
+    RetrievalModule,
   ],
   controllers: [AppController],
   providers: [
