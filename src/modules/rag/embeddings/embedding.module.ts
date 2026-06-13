@@ -1,17 +1,19 @@
 import { Module } from '@nestjs/common';
 import { EmbeddingService } from './services/embedding.service';
-import { EmbeddingRepository } from '../persistence/repositories/embedding.repository';
-import { EMBEDDING_PROVIDER_TOKEN } from './interfaces/embedding-provider.interface';
 import { OpenAIEmbeddingProvider } from './provider/openai-embedding.provider';
+import { EmbeddingProvider } from './interfaces/embedding-provider.interface';
+import { EmbeddingRepository } from '../persistence/repositories/embedding.repository';
 
 @Module({
+  imports: [],
   providers: [
+    EmbeddingService,
+    OpenAIEmbeddingProvider,
+    EmbeddingRepository,
     {
-      provide: EMBEDDING_PROVIDER_TOKEN,
+      provide: EmbeddingProvider,
       useClass: OpenAIEmbeddingProvider,
     },
-    EmbeddingService,
-    EmbeddingRepository,
   ],
   exports: [EmbeddingService],
 })

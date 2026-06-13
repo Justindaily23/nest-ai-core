@@ -11,6 +11,7 @@ import { RedisModule } from './core/redis/redis.module';
 import { ContextStore } from './common/context/context.store';
 import { ContextInterceptor } from './common/context/context.interceptor';
 import { RagModule } from './modules/rag/rag.module';
+import { DatabaseModule } from './core/database/database.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { RagModule } from './modules/rag/rag.module';
     }),
     RedisModule,
     RagModule,
+    DatabaseModule,
   ],
   controllers: [AppController],
   providers: [

@@ -1,8 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool } from 'pg';
 // 1. Import your official injection token directly from your module
-import { PG_CONNECTION } from './database.module';
-
+import { PG_CONNECTION } from './database.constants';
 @Injectable()
 export class DatabaseHealthService {
   constructor(

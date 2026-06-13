@@ -12,9 +12,7 @@ import { Pool } from 'pg';
 import { Database } from './kysely/database.types';
 import { Kysely, PostgresDialect } from 'kysely';
 import { DatabaseService } from './database.service';
-
-export const PG_CONNECTION = Symbol('PG_CONNECTION');
-export const KYSELY_CONNECTION = Symbol('KYSELY_CONNECTION');
+import { KYSELY_CONNECTION, PG_CONNECTION } from './database.constants';
 
 const PostgresConnectionProvider: Provider = {
   provide: PG_CONNECTION,

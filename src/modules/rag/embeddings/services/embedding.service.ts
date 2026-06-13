@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { EmbeddingRepository } from '../../persistence/repositories/embedding.repository';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { GenerateChunkingEmbeddingParams } from '../interfaces/embedding-service.interface';
-import { type EmbeddingProvider } from '../interfaces/embedding-provider.interface';
+import { EmbeddingProvider } from '../interfaces/embedding-provider.interface';
 import { EmbeddingGenerationException } from '../exceptions/embedding.exception';
 
 @Injectable()

@@ -7,9 +7,13 @@ import { RetrievalModule } from './retrieval/retrieval.module';
 import { CitationBoundaryServiceModule } from './citation-boundaries/citation-boundaries.module';
 import { PromptFormattingModule } from './prompt-formatting/prompt-formatting.module';
 import { EmbeddingModule } from './embeddings/embedding.module';
+import { DatabaseModule } from '@/core/database/database.module';
+import { AppConfigModule } from '@/config/config.module';
 
 @Module({
   imports: [
+    DatabaseModule,
+    AppConfigModule,
     ContextAssemblyModule,
     TokenizationModule,
     PersistenceModule,

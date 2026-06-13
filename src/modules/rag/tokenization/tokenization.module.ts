@@ -12,6 +12,6 @@ import { TokenizerService } from './tokenizer.service';
     TokenizerService,
   ],
   // Export the facade service so other modules can count tokens safely
-  exports: [TokenizerService],
+  exports: [TokenizerService, 'TOKENIZER_PROVIDER'],
 })
 export class TokenizationModule {}
