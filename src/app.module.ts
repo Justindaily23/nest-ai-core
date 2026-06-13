@@ -8,14 +8,9 @@ import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { SystemLoggingInterceptor } from './core/interceptors/logging.interceptor';
 import { GlobalHttpExceptionFilter } from './common/filters/http-exception.filter';
 import { RedisModule } from './core/redis/redis.module';
-import { ContextModule } from './common/context/context.module';
 import { ContextStore } from './common/context/context.store';
 import { ContextInterceptor } from './common/context/context.interceptor';
-import { ContextAssemblyModule } from './modules/rag/context-assembly/context-assembly.module';
-import { TokenizationModule } from './modules/rag/tokenization/tokenization.module';
-import { PersistenceModule } from './modules/rag/persistence/persistence.module';
-import { ChunkingModule } from './modules/rag/chunking/chunking.module';
-import { RetrievalModule } from './modules/rag/retrieval/retrieval.module';
+import { RagModule } from './modules/rag/rag.module';
 
 @Module({
   imports: [
@@ -55,12 +50,7 @@ import { RetrievalModule } from './modules/rag/retrieval/retrieval.module';
       },
     }),
     RedisModule,
-    ContextModule,
-    ContextAssemblyModule,
-    TokenizationModule,
-    PersistenceModule,
-    ChunkingModule,
-    RetrievalModule,
+    RagModule,
   ],
   controllers: [AppController],
   providers: [

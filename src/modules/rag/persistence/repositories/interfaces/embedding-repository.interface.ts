@@ -13,3 +13,10 @@ export interface CreateEmbeddingParams {
   /** Raw floating-point array representing the mathematical vector projection. */
   embedding: number[];
 }
+
+// embeddings/interfaces/embedding-repository.interface.ts
+export interface EmbeddingExistenceParams {
+  tenantId: string;
+  chunkId: string;
+  model: string;
+}

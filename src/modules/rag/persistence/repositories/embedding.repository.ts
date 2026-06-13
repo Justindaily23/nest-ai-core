@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '@core/database/database.service';
-import { CreateEmbeddingParams } from './interfaces/embedding-repository.interface';
+import {
+  CreateEmbeddingParams,
+  EmbeddingExistenceParams,
+} from './interfaces/embedding-repository.interface';
 import { sql } from 'kysely';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { OperationalException } from '@/common/exceptions/operational.exception';
+import { DatabaseStorageException } from '../exceptions/database-storage.exception';
 
 @Injectable()
 export class EmbeddingRepository {
@@ -17,11 +20,10 @@ export class EmbeddingRepository {
     // Guard: empty vectors produce silent pgvector errors and waste a DB round-trip.
     // Fail immediately with a structured code so ingestion bugs surface at the source.
     if (!params.embedding || params.embedding.length === 0) {
-      throw new OperationalException(
-        'validation',
+      throw new DatabaseStorageException(
+        'database', // Classified as a structural input block
         'EMPTY_EMBEDDING_VECTOR',
-        'Embedding vector cannot be empty.',
-        undefined,
+        `Embedding vector cannot be empty for chunk: ${params.chunkId}`,
         { chunkId: params.chunkId, model: params.model },
       );
     }
@@ -54,11 +56,42 @@ export class EmbeddingRepository {
         err: error,
         msg: 'Failed to upsert embedding vector.',
       });
-      throw new OperationalException(
+      throw new DatabaseStorageException(
         'database',
         'EMBEDDING_UPSERT_FAILED',
         'Failed to persist embedding vector.',
-        undefined, // no HTTP status — this is infrastructure, not HTTP
+        error,
+      );
+    }
+  }
+
+  async existsByChunkAndModel(
+    params: EmbeddingExistenceParams,
+  ): Promise<boolean> {
+    try {
+      const result = await this.db.client
+        .selectFrom('chunk_embeddings')
+        .select(sql`1`.as('exists'))
+        .where('tenant_id', '=', params.tenantId)
+        .where('chunk_id', '=', params.chunkId)
+        .where('model', '=', params.model)
+        .limit(1)
+        .executeTakeFirst();
+
+      return !!result;
+    } catch (error) {
+      this.logger.error({
+        tenantId: params.tenantId,
+        chunkId: params.chunkId,
+        model: params.model,
+        err: error,
+        msg: 'Failed to check embedding existence.',
+      });
+
+      throw new DatabaseStorageException(
+        'database',
+        'EMBEDDING_EXISTENCE_CHECK_FAILED',
+        `Failed to verify existence profile for chunk: ${params.chunkId}`,
         error,
       );
     }
@@ -78,11 +111,10 @@ export class EmbeddingRepository {
         err: error,
         msg: 'Failed to delete embeddings by chunkId.',
       });
-      throw new OperationalException(
+      throw new DatabaseStorageException(
         'database',
         'EMBEDDING_DELETE_BY_CHUNK_FAILED',
-        'Failed to delete embedding vectors for chunk.',
-        undefined,
+        `Failed to delete embedding vectors for chunk: ${chunkId}`,
         error,
       );
     }
@@ -102,11 +134,10 @@ export class EmbeddingRepository {
         err: error,
         msg: 'Failed to delete embeddings by model.',
       });
-      throw new OperationalException(
+      throw new DatabaseStorageException(
         'database',
         'EMBEDDING_DELETE_BY_MODEL_FAILED',
-        'Failed to delete embedding vectors for model.',
-        undefined,
+        `Failed to delete embedding vectors for model: ${model}`,
         error,
       );
     }
