@@ -10,9 +10,10 @@ import { createDatabasePool } from './database.connection';
 import { PinoLogger } from 'nestjs-pino';
 import { Pool } from 'pg';
 import { Database } from './kysely/database.types';
-import { Kysely, PostgresDialect } from 'kysely';
+//import { Kysely, PostgresDialect } from 'kysely';
 import { DatabaseService } from './database.service';
 import { KYSELY_CONNECTION, PG_CONNECTION } from './database.constants';
+import type { Kysely } from 'kysely' with { 'resolution-mode': 'import' };
 
 const PostgresConnectionProvider: Provider = {
   provide: PG_CONNECTION,
@@ -26,7 +27,9 @@ const PostgresConnectionProvider: Provider = {
 
 const KyselyProvider: Provider = {
   provide: KYSELY_CONNECTION,
-  useFactory: (pool: Pool, logger: PinoLogger) => {
+  useFactory: async (pool: Pool, logger: PinoLogger) => {
+    const { Kysely, PostgresDialect } = await import('kysely');
+
     return new Kysely<Database>({
       dialect: new PostgresDialect({
         pool,

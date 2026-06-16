@@ -7,7 +7,7 @@ import { AppConfigService } from './config/config.service';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { SystemLoggingInterceptor } from './core/interceptors/logging.interceptor';
 import { GlobalHttpExceptionFilter } from './common/filters/http-exception.filter';
-import { RedisModule } from './core/redis/redis.module';
+//import { RedisModule } from './core/redis/redis.module';
 import { ContextStore } from './common/context/context.store';
 import { ContextInterceptor } from './common/context/context.interceptor';
 import { RagModule } from './modules/rag/rag.module';
@@ -50,9 +50,9 @@ import { DatabaseModule } from './core/database/database.module';
         };
       },
     }),
-    RedisModule,
+    // RedisModule,
     RagModule,
-    DatabaseModule,
+    // DatabaseModule,
   ],
   controllers: [AppController],
   providers: [

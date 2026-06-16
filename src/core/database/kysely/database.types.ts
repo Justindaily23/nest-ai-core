@@ -1,4 +1,6 @@
-import type { Generated, JSONColumnType } from 'kysely';
+import type { Generated, JSONColumnType } from 'kysely' with {
+  'resolution-mode': 'import',
+};
 import type { ChunkRole } from '@common/enums/chunk-role.enum';
 
 /**
