@@ -1,7 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { DatabaseService } from '@/core/database/database.service';
-import { CreateChunkParams } from './interfaces/chunk-repository.interface';
+import {
+  ChunkWithDocumentMetadata,
+  CreateChunkParams,
+  KeywordSearchParams,
+  KeywordSearchResult,
+} from './interfaces/chunk-repository.interface';
 import { OperationalException } from '@/common/exceptions/operational.exception';
 import { sql } from 'kysely';
 import { ChunkRole } from '@/common/enums/chunk-role.enum';
@@ -136,14 +141,21 @@ export class ChunkRepository {
   async findByIds(
     tenantId: string,
     ids: string[],
-  ): Promise<{ id: string; content: string }[]> {
+  ): Promise<ChunkWithDocumentMetadata[]> {
     if (ids.length === 0) return [];
 
     return this.db.client
       .selectFrom('chunks')
-      .select(['id', 'content'])
-      .where('tenant_id', '=', tenantId)
-      .where('id', 'in', ids)
+      .innerJoin('documents', 'documents.id', 'chunks.source_id')
+
+      .select([
+        'chunks.id',
+        'chunks.content',
+        'chunks.source_id as documentId',
+        'documents.filename',
+      ])
+      .where('chunks.tenant_id', '=', tenantId)
+      .where('chunks.id', 'in', ids)
       .execute();
   }
 
@@ -171,6 +183,33 @@ export class ChunkRepository {
       .where('parent.tenant_id', '=', tenantId)
       .where('child.role', '=', ChunkRole.CHILD)
       .where('child.id', 'in', childChunkIds)
+      .execute();
+  }
+
+  async keywordSearch(
+    params: KeywordSearchParams,
+  ): Promise<KeywordSearchResult[]> {
+    const { tenantId, query, limit } = params;
+
+    return this.db.client
+      .selectFrom('chunks')
+      .innerJoin('documents', 'documents.id', 'chunks.source_id')
+      .select([
+        'chunks.id as chunkId',
+        'chunks.content',
+        'documents.id as documentId',
+        'documents.filename',
+      ])
+      .where('chunks.tenant_id', '=', tenantId)
+      .where('chunks.role', '=', ChunkRole.CHILD)
+      .where(
+        sql<boolean>`to_tsvector('english', chunks.content) @@ plainto_tsquery('english', ${query})`,
+      )
+      .orderBy(
+        sql`ts_rank(to_tsvector('english', chunks.content), plainto_tsquery('english', ${query}))`,
+        'desc',
+      )
+      .limit(limit)
       .execute();
   }
 }

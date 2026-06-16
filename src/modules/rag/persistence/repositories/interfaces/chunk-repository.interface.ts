@@ -11,3 +11,23 @@ export interface CreateChunkParams {
   parentChunkId?: string | null;
   metadata?: Record<string, unknown> | null;
 }
+
+export interface KeywordSearchParams {
+  tenantId: string;
+  query: string;
+  limit: number;
+}
+
+export interface KeywordSearchResult {
+  chunkId: string;
+  content: string;
+  documentId: string;
+  filename: string | null;
+}
+
+export interface ChunkWithDocumentMetadata {
+  id: string;
+  content: string;
+  documentId: string;
+  filename: string | null;
+}

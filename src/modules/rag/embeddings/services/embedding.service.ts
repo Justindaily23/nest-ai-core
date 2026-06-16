@@ -38,7 +38,7 @@ export class EmbeddingService {
     }
 
     try {
-      const vector = await this.embeddingProvider.embed(content, model);
+      const vector = await this.embeddingProvider.embed(content);
 
       if (!vector?.length) {
         throw new EmbeddingGenerationException(

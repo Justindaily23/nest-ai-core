@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
-import { RetrievalService } from './services/retrieval.service';
+import { VectorRetrievalService } from './services/vector-retrieval.service';
 import { RetrievalRepository } from './repositories/retrieval.repository';
 import { PersistenceModule } from '../persistence/persistence.module';
 
 @Module({
   imports: [PersistenceModule],
-  providers: [RetrievalService, RetrievalRepository],
-  exports: [RetrievalService],
+  providers: [VectorRetrievalService, RetrievalRepository],
+  exports: [VectorRetrievalService],
 })
 export class RetrievalModule {}

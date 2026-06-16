@@ -55,12 +55,12 @@ export class RetrievalRepository {
           // We subtract distance from 1 to yield a human-readable similarity score (higher = closer match).
           sql<number>`1 - (embedding <=> ${queryVector})`.as('score'),
         ])
-        // 🔒 Multitenant Security Boundary Check
+        //  Multitenant Security Boundary Check
         .where('tenant_id', '=', params.tenantId)
-        // 🧬 AI Engine Consistency Check
+        // AI Engine Consistency Check
         .where('model', '=', params.model)
 
-        // 📈 Query Optimization Hint:
+        // Query Optimization Hint:
         // Ordering explicitly by the raw vector distance matches the structural definition
         // of our physical DB index, allowing PostgreSQL to perform an optimized index-driven sweep.
         .orderBy(sql`embedding <=> ${queryVector}`)
@@ -71,7 +71,7 @@ export class RetrievalRepository {
       // Return the ordered array of matched chunk entries and similarity scores
       return rows;
     } catch (error) {
-      // 🚨 BLOCK 4: Infrastructure Error Isolation & Context Capture
+      // Infrastructure Error Isolation & Context Capture
       // Write a highly specific telemetry entry into our system logs for operations visibility.
       // We dump structural context parameters without leaking any actual query payloads.
       this.logger.error({

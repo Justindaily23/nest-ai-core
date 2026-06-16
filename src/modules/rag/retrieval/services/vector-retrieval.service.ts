@@ -1,5 +1,3 @@
-// src/modules/rag/retrieval/services/retrieval.service.ts
-
 import { Injectable } from '@nestjs/common';
 import { RetrievalRepository } from '../repositories/retrieval.repository';
 import { ChunkRepository } from '@/modules/rag/persistence/repositories/chunk.repository';
@@ -12,11 +10,11 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { OperationalException } from '@/common/exceptions/operational.exception';
 
 @Injectable()
-export class RetrievalService {
+export class VectorRetrievalService {
   constructor(
     private readonly retrievalRepository: RetrievalRepository,
     private readonly chunkRepository: ChunkRepository,
-    @InjectPinoLogger(RetrievalService.name)
+    @InjectPinoLogger(VectorRetrievalService.name)
     private readonly logger: PinoLogger,
   ) {}
 
@@ -27,10 +25,23 @@ export class RetrievalService {
   async retrieveFlat(params: FlatRetrievalParams): Promise<RetrievedChunk[]> {
     const { tenantId, model, queryEmbedding, topK, minScore = 0.7 } = params;
 
-    // Guard against pathological topK values to protect latency footprints
-    const safeTopK = Math.min(topK, 100);
+    /**
+     * Guard against pathological topK values to protect latency footprints
+     *  Here, a reranker model could be used if i were searching through millions
+     *  of highly specialized documents like medical and others...for now i pass with this!
+     */
+    const safeTopK = Math.min(topK, 20);
 
-    // --- STEP 1: VECTOR SEARCH SIMILARITY SWEEP ---
+    // Log the incoming asynchronous request
+    this.logger.debug(
+      { tenantId, safeTopK },
+      'Starting Semantic Vector Search.......',
+    );
+
+    // Start times
+    const startTime = Date.now();
+
+    // VECTOR SEARCH SIMILARITY SWEEP
     const results = await this.retrievalRepository.search({
       tenantId,
       model,
@@ -38,18 +49,38 @@ export class RetrievalService {
       topK: safeTopK,
     });
 
+    // Log performance metrics for the async operation
+    const duration = Date.now() - startTime;
+    this.logger.info(
+      { durationMs: duration, count: results.length },
+      'Keyword search finished',
+    );
+
     if (results.length === 0) {
+      // Log a warning for empty results to catch potential indexing system errors
+      this.logger.warn({ tenantId }, 'No chunks found for the given query');
       return [];
     }
 
-    // --- STEP 2: SCORE FILTERING ---
+    // SCORE FILTERING ---
     const filtered = results.filter((r) => r.score >= minScore);
 
     if (filtered.length === 0) {
+      this.logger.warn(
+        {
+          tenantId,
+          minScore,
+          totalFoundBeforeFilter: results.length,
+        },
+        'No chunks passed the similarity score threshold',
+      );
       return [];
     }
 
-    // --- STEP 3: BULK FETCH RELATIONAL TEXT BLOCKS ---
+    /**
+     *   BULK FETCH RELATIONAL TEXT BLOCKS
+     *  It catches a dangerous scenario where your vector search index is out of sync with your main database tables
+     */
     const chunkIds = filtered.map((r) => r.chunkId);
 
     const chunks = await this.chunkRepository.findByIds(tenantId, chunkIds);
@@ -66,7 +97,7 @@ export class RetrievalService {
     // Allocate internal lookup map for high-speed O(1) correlation matching
     const chunkMap = new Map(chunks.map((c) => [c.id, c.content]));
 
-    // --- STEP 4: HARD INVARIANT SYSTEM INTEGRITY CHECK ---
+    //  HARD INVARIANT SYSTEM INTEGRITY CHECK ---
     // Extract any vector references that point to orphaned text nodes.
     // This explicitly surfaces storage-layer drift or deletion synchronization bugs.
     const missing = filtered.filter((r) => !chunkMap.has(r.chunkId));
@@ -81,7 +112,7 @@ export class RetrievalService {
       });
 
       throw new OperationalException(
-        'system', // FIXED: Aligned perfectly to your available ErrorSystem type union literal
+        'system',
         'CHUNK_CONTENT_MISSING',
         'Retrieved chunk vector references are missing corresponding data content rows.',
         undefined,
@@ -89,12 +120,14 @@ export class RetrievalService {
       );
     }
 
-    // --- STEP 5: PURE STABLE ORDER RESTORATION ---
+    // PURE STABLE ORDER RESTORATION ---
     // Guaranteed non-null assertion (!) because step 4 eliminated all possibility of leakage.
     return filtered.map((r) => ({
       chunkId: r.chunkId,
       content: chunkMap.get(r.chunkId)!,
       score: r.score,
+      documentId: r.documentId,
+      filename: r.filename,
     }));
   }
 

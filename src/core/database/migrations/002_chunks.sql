@@ -43,6 +43,9 @@ CREATE TABLE IF NOT EXISTS chunks (
 -- High-speed data isolation filter index.
 CREATE INDEX idx_chunks_tenant ON chunks (tenant_id);
 
+CREATE INDEX idx_chunks_content_fts 
+ON chunks USING GIN (to_tsvector('english', content));
+
 -- Optimizes hierarchical context lookups by sorting matching text slices instantly.
 CREATE INDEX idx_chunks_source ON chunks (source_id, role, position);
 

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getLoggerToken, PinoLogger } from 'nestjs-pino';
-import { RetrievalService } from './retrieval.service';
+import { VectorRetrievalService } from './vector-retrieval.service';
 import { RetrievalRepository } from '../repositories/retrieval.repository';
 import { ChunkRepository } from '@/modules/rag/persistence/repositories/chunk.repository';
 import { RetrievedChunk } from '../interfaces/retrieval-repository.interface';
@@ -18,7 +18,7 @@ function buildMockLogger(): PinoLogger {
 }
 
 describe('retrieveWithParentExpansion - Parent expansion semantics', () => {
-  let service: RetrievalService;
+  let service: VectorRetrievalService;
   let mockChunkRepo: jest.Mocked<
     Pick<ChunkRepository, 'findParentsWithChildren'>
   >;
@@ -37,14 +37,17 @@ describe('retrieveWithParentExpansion - Parent expansion semantics', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        RetrievalService,
+        VectorRetrievalService,
         { provide: RetrievalRepository, useValue: { search: jest.fn() } },
         { provide: ChunkRepository, useValue: mockChunkRepo },
-        { provide: getLoggerToken(RetrievalService.name), useValue: logger },
+        {
+          provide: getLoggerToken(VectorRetrievalService.name),
+          useValue: logger,
+        },
       ],
     }).compile();
 
-    service = module.get(RetrievalService);
+    service = module.get(VectorRetrievalService);
 
     //Mock retrieveFlat at the service level -we are testing expansion logic
     // not the vector search. This isolates the unit under test precisely
