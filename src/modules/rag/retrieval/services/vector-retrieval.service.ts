@@ -82,7 +82,6 @@ export class VectorRetrievalService {
      *  It catches a dangerous scenario where your vector search index is out of sync with your main database tables
      */
     const chunkIds = filtered.map((r) => r.chunkId);
-
     const chunks = await this.chunkRepository.findByIds(tenantId, chunkIds);
 
     if (chunks.length === 0) {
@@ -95,7 +94,8 @@ export class VectorRetrievalService {
     }
 
     // Allocate internal lookup map for high-speed O(1) correlation matching
-    const chunkMap = new Map(chunks.map((c) => [c.id, c.content]));
+    // Note: We index the entire database entity row, not just its content string.
+    const chunkMap = new Map(chunks.map((chunk) => [chunk.id, chunk]));
 
     //  HARD INVARIANT SYSTEM INTEGRITY CHECK ---
     // Extract any vector references that point to orphaned text nodes.
@@ -121,14 +121,18 @@ export class VectorRetrievalService {
     }
 
     // PURE STABLE ORDER RESTORATION ---
-    // Guaranteed non-null assertion (!) because step 4 eliminated all possibility of leakage.
-    return filtered.map((r) => ({
-      chunkId: r.chunkId,
-      content: chunkMap.get(r.chunkId)!,
-      score: r.score,
-      documentId: r.documentId,
-      filename: r.filename,
-    }));
+    // Guaranteed non-null assertion (!) because the integrity check above eliminated all possibility of leakage.
+    return filtered.map((r) => {
+      const dbChunk = chunkMap.get(r.chunkId)!; // Extract the rich DB entity row
+
+      return {
+        chunkId: r.chunkId,
+        score: r.score,
+        content: dbChunk.content, // Read string content from the database row
+        documentId: dbChunk.documentId, // Read document ID from the database row
+        filename: dbChunk.filename ?? 'Unknown Document', // Read filename from the database row
+      };
+    });
   }
 
   async retrieveWithParentExpansion(

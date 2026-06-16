@@ -8,8 +8,6 @@ export interface VectorSearchParams {
 export interface VectorSearchResult {
   chunkId: string;
   score: number; //  The similarity score between the query embedding and the chunk embedding(higher is more similar)
-  documentId: string;
-  filename: string;
 }
 
 export interface FlatRetrievalParams {

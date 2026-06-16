@@ -1,5 +1,5 @@
-import { Generated, JSONColumnType } from 'kysely';
-import { ChunkRole } from '@common/enums/chunk-role.enum';
+import type { Generated, JSONColumnType } from 'kysely';
+import type { ChunkRole } from '@common/enums/chunk-role.enum';
 
 /**
  * Core table tracking uploaded raw files (e.g., PDFs, Word docs, Slack exports).

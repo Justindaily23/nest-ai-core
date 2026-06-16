@@ -4,7 +4,7 @@ import {
   CreateEmbeddingParams,
   EmbeddingExistenceParams,
 } from './interfaces/embedding-repository.interface';
-import { sql } from 'kysely';
+import { getSql } from '@/core/database/kysely/kysely-sql';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { DatabaseStorageException } from '../exceptions/database-storage.exception';
 
@@ -17,7 +17,9 @@ export class EmbeddingRepository {
   ) {}
 
   async upsert(params: CreateEmbeddingParams): Promise<void> {
-    // Guard: empty vectors produce silent pgvector errors and waste a DB round-trip.
+    const sql = await getSql();
+    // Guard: empty vectors produce silent pgvector errors and waste
+    // a DB round-trip.
     // Fail immediately with a structured code so ingestion bugs surface at the source.
     if (!params.embedding || params.embedding.length === 0) {
       throw new DatabaseStorageException(
@@ -68,6 +70,7 @@ export class EmbeddingRepository {
   async existsByChunkAndModel(
     params: EmbeddingExistenceParams,
   ): Promise<boolean> {
+    const sql = await getSql();
     try {
       const result = await this.db.client
         .selectFrom('chunk_embeddings')

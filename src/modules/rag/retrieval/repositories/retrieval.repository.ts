@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '@/core/database/database.service';
-import { sql } from 'kysely';
 import {
   VectorSearchParams,
   VectorSearchResult,
 } from '../interfaces/retrieval-repository.interface';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { OperationalException } from '@/common/exceptions/operational.exception';
+import { getSql } from '@/core/database/kysely/kysely-sql';
 
 @Injectable()
 export class RetrievalRepository {
@@ -25,6 +25,7 @@ export class RetrievalRepository {
    * This is a readonly projection method designed for raw mathematical evaluation.
    */
   async search(params: VectorSearchParams): Promise<VectorSearchResult[]> {
+    const sql = await getSql();
     // Blast-Radius Defensive Guard Rail
     // If an upstream service or API failure passes an empty array, stop immediately.
     // This protects the database connection pool from executing mathematically invalid queries.
@@ -69,7 +70,10 @@ export class RetrievalRepository {
         .execute();
 
       // Return the ordered array of matched chunk entries and similarity scores
-      return rows;
+      return rows.map((row) => ({
+        chunkId: row.chunkId,
+        score: Number(row.score),
+      }));
     } catch (error) {
       // Infrastructure Error Isolation & Context Capture
       // Write a highly specific telemetry entry into our system logs for operations visibility.

@@ -4,7 +4,7 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
-import { FastifyRequest } from 'fastify';
+import type { FastifyRequest } from 'fastify';
 import { randomUUID } from 'crypto';
 import { Observable, Subscription } from 'rxjs';
 import { ContextStore } from './context.store';

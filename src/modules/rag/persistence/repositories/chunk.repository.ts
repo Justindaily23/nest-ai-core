@@ -8,8 +8,8 @@ import {
   KeywordSearchResult,
 } from './interfaces/chunk-repository.interface';
 import { OperationalException } from '@/common/exceptions/operational.exception';
-import { sql } from 'kysely';
 import { ChunkRole } from '@/common/enums/chunk-role.enum';
+import { getSql } from '@/core/database/kysely/kysely-sql';
 
 @Injectable()
 export class ChunkRepository {
@@ -39,6 +39,7 @@ export class ChunkRepository {
 
     try {
       await this.db.client.transaction().execute(async (trx) => {
+        const sql = await getSql();
         // PARENT DOCUMENT VALIDATION ---
         // Verify the parent document exists and is scoped to this tenant
         // before writing any chunks. Prevents orphaned chunk records and
@@ -189,6 +190,8 @@ export class ChunkRepository {
   async keywordSearch(
     params: KeywordSearchParams,
   ): Promise<KeywordSearchResult[]> {
+    const sql = await getSql();
+
     const { tenantId, query, limit } = params;
 
     return this.db.client
