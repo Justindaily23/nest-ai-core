@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ChunkRepository } from '../../persistence/repositories/chunk.repository';
-import { RetrievalQuery } from '../types/retrieval-query.type';
-import { RetrievedContext } from '../types/retrieved-context.type';
+import { RetrievalQuery } from '../../shared/types/retrieval-query.type';
+import { RetrievedContext } from '../../shared/types/retrieved-context.type';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { clampTop } from '../../shared/utils/clampTopK';
 
 @Injectable()
 export class LexicalRetrievalService {
@@ -14,10 +15,10 @@ export class LexicalRetrievalService {
 
   // Keyword search
   async retrieve(params: RetrievalQuery): Promise<RetrievedContext[]> {
-    const { tenantId, query, topK } = params;
+    const { tenantId, query, topK, filters } = params;
 
     // Guard against pathological topK values to protect latency footprints
-    const safeTopK = Math.min(topK, 20);
+    const safeTopK = clampTop(topK);
 
     // Log the incoming asynchronous request
     this.logger.debug(
@@ -33,6 +34,10 @@ export class LexicalRetrievalService {
       tenantId,
       query,
       limit: safeTopK,
+      filters: {
+        documentIds: filters?.documentIds,
+        mimeTypes: filters?.mimeTypes,
+      },
     });
 
     // Log performance metrics for the async operation
@@ -45,7 +50,7 @@ export class LexicalRetrievalService {
     if (results.length === 0) {
       // Log a warning for empty results to catch potential indexing system errors
       this.logger.warn(
-        { tenantId, query },
+        { tenantId, query, filters },
         'No chunks found for the given query',
       );
       return [];
@@ -63,7 +68,7 @@ export class LexicalRetrievalService {
         filename: r.filename ?? 'unknown',
       },
       signals: {
-        lexicalScore: index + 1,
+        lexicalRank: index + 1,
       },
     }));
   }

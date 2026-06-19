@@ -3,6 +3,10 @@ export interface VectorSearchParams {
   model: string;
   queryEmbedding: number[];
   topK: number;
+  filter?: {
+    documentIds?: string[];
+    mimeTypes?: string[];
+  };
 }
 
 export interface VectorSearchResult {

@@ -16,6 +16,10 @@ export interface KeywordSearchParams {
   tenantId: string;
   query: string;
   limit: number;
+  filters?: {
+    documentIds?: string[];
+    mimeTypes?: string[];
+  };
 }
 
 export interface KeywordSearchResult {
@@ -28,6 +32,7 @@ export interface KeywordSearchResult {
 export interface ChunkWithDocumentMetadata {
   id: string;
   content: string;
+  parentChunkId: string | null;
   documentId: string;
   filename: string | null;
 }

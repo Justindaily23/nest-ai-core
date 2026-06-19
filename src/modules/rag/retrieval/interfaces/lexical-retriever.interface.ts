@@ -1,5 +1,5 @@
-import { RetrievalQuery } from '../types/retrieval-query.type';
-import { RetrievedContext } from '../types/retrieved-context.type';
+import { RetrievalQuery } from '../../shared/types/retrieval-query.type';
+import { RetrievedContext } from '../../shared/types/retrieved-context.type';
 
 /**
  * Keyword / metadata based retriever.

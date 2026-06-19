@@ -43,4 +43,12 @@ export class AppConfigService {
   get isTest(): boolean {
     return this.config.get<string>('app.node_env', { infer: true }) === 'test';
   }
+
+  get ragTokenBudget(): number {
+    return this.config.get<number>('rag.token_budget', { infer: true }) ?? 6000;
+  }
+
+  get llmModel(): string {
+    return this.config.get<string>('llm.model', { infer: true })!;
+  }
 }

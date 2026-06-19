@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { VectorRetrievalService } from '../services/vector-retrieval.service';
-import { RetrievalQuery } from '../types/retrieval-query.type';
-import { RetrievedContext } from '../types/retrieved-context.type';
+import type { RetrievalQuery } from '../../shared/types/retrieval-query.type';
+import type { RetrievedContext } from '../../shared/types/retrieved-context.type';
 import { QueryEmbeddingService } from '../services/query-embedding.service';
+import { clampTop } from '../../shared/utils/clampTopK';
 
 @Injectable()
 export class VectorRetrieverAdapter {
@@ -14,12 +15,18 @@ export class VectorRetrieverAdapter {
 
   async retrieve(query: RetrievalQuery): Promise<RetrievedContext[]> {
     const embedding = await this.queryEmbeddingService.embed(query.query);
+    const safeTopK = clampTop(query.topK);
 
     const results = await this.vectorService.retrieveFlat({
       tenantId: query.tenantId,
       model: this.model,
       queryEmbedding: embedding,
-      topK: query.topK,
+      topK: safeTopK,
+
+      // TODO(filters): re-enable once FlatRetrievalParams supports filters AND
+      // the ivfflat overfetch/iterative_scan decision is made (depends on confirming
+      // pgvector version once the DB exists) — see prior thread re: filtered ANN recall.
+      // filters: query.filters,
     });
 
     return results.map((r, index) => ({
@@ -31,7 +38,8 @@ export class VectorRetrieverAdapter {
         filename: r.filename,
       },
       signals: {
-        vectorScore: index + 1,
+        vectorRank: index + 1,
+        vectorSimilarity: r.score,
       },
     }));
   }

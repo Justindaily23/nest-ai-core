@@ -1,10 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getLoggerToken, PinoLogger } from 'nestjs-pino';
-import { VectorRetrievalService } from './vector-retrieval.service';
+import { VectorRetrievalService } from '../services/vector-retrieval.service';
 import { RetrievalRepository } from '../repositories/retrieval.repository';
 import { ChunkRepository } from '@/modules/rag/persistence/repositories/chunk.repository';
 import { RetrievedChunk } from '../interfaces/retrieval-repository.interface';
-import { mock } from 'node:test';
 
 function buildMockLogger(): PinoLogger {
   return {
@@ -26,9 +25,27 @@ describe('retrieveWithParentExpansion - Parent expansion semantics', () => {
 
   //Flat results that retrievalFlat will produce -mocked at the service level
   const mockFlatResults: RetrievedChunk[] = [
-    { chunkId: 'child-1', content: 'child 1 content', score: 0.91 },
-    { chunkId: 'child-2', content: 'child 2 content', score: 0.87 },
-    { chunkId: 'child-3', content: 'child 3 content', score: 0.94 },
+    {
+      chunkId: 'child-1',
+      content: 'child 1 content',
+      score: 0.91,
+      documentId: 'documentId-1',
+      filename: 'filename-A.pdf',
+    },
+    {
+      chunkId: 'child-2',
+      content: 'child 2 content',
+      score: 0.87,
+      documentId: 'documentId-2',
+      filename: 'filename-B.pdf',
+    },
+    {
+      chunkId: 'child-3',
+      content: 'child 3 content',
+      score: 0.94,
+      documentId: 'documentId-3',
+      filename: 'filename-B.pdf',
+    },
   ];
 
   beforeEach(async () => {

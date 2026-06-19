@@ -8,6 +8,7 @@ import {
 } from '../interfaces/retrieval-repository.interface';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { OperationalException } from '@/common/exceptions/operational.exception';
+import { clampTop } from '../../shared/utils/clampTopK';
 
 @Injectable()
 export class VectorRetrievalService {
@@ -30,7 +31,7 @@ export class VectorRetrievalService {
      *  Here, a reranker model could be used if i were searching through millions
      *  of highly specialized documents like medical and others...for now i pass with this!
      */
-    const safeTopK = Math.min(topK, 20);
+    const safeTopK = clampTop(topK);
 
     // Log the incoming asynchronous request
     this.logger.debug(
@@ -53,7 +54,7 @@ export class VectorRetrievalService {
     const duration = Date.now() - startTime;
     this.logger.info(
       { durationMs: duration, count: results.length },
-      'Keyword search finished',
+      'Vector similarity search finished',
     );
 
     if (results.length === 0) {

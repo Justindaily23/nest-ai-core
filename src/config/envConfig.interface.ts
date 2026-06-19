@@ -12,12 +12,16 @@ export interface RedisConfig {
 export interface LlmConfig {
   provider: string; // e.g., 'openai', 'anthropic'
   api_key: string;
+  model: string;
 }
 
 // Dedicated interface for app specific configurations
 export interface AppConfig {
   node_env: string;
   port: number;
+}
+export interface RagConfig {
+  token_budget: number;
 }
 
 // Master interface combining everything
@@ -26,4 +30,5 @@ export interface EnvConfig {
   database: DatabaseConfig;
   redis: RedisConfig;
   llm: LlmConfig;
+  rag: RagConfig;
 }

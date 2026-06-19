@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { RetrievalQuery } from '../types/retrieval-query.type';
-import { RetrievedContext } from '../types/retrieved-context.type';
+import type { RetrievalQuery } from '../../shared/types/retrieval-query.type';
+import { RetrievedContext } from '../../shared/types/retrieved-context.type';
 import { LexicalRetrievalService } from './lexical-retrieval.service';
 import { VectorRetrieverAdapter } from '../adapters/vector-retriever.adapter';
+import { clampTop } from '../../shared/utils/clampTopK';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 
 @Injectable()
 export class HybridRetrievalService {
@@ -13,6 +15,8 @@ export class HybridRetrievalService {
   constructor(
     private readonly vectorAdapter: VectorRetrieverAdapter,
     private readonly lexicalService: LexicalRetrievalService,
+    @InjectPinoLogger(HybridRetrievalService.name)
+    private readonly logger: PinoLogger,
   ) {}
 
   /**
@@ -22,11 +26,21 @@ export class HybridRetrievalService {
    * Neither retriever knows about the other — fusion happens here only.
    */
   async retrieve(query: RetrievalQuery): Promise<RetrievedContext[]> {
-    // Run both retrievers concurrently — neither depends on the other
-    const [vectorResults, lexicalResults] = await Promise.all([
+    // // Run both retrievers concurrently — neither depends on the other
+    // const [vectorResults, lexicalResults] = await Promise.all([
+    //   this.vectorAdapter.retrieve(query),
+    //   this.lexicalService.retrieve(query),
+    // ]);
+
+    // allSettled instead of all — one retriever failing should degrade
+    // gracefully to the other's results, not take the whole call down.
+    const [vectorOutcome, lexicalOutcome] = await Promise.allSettled([
       this.vectorAdapter.retrieve(query),
       this.lexicalService.retrieve(query),
     ]);
+
+    const vectorResults = this.unwrap(vectorOutcome, 'vector');
+    const lexicalResults = this.unwrap(lexicalOutcome, 'lexical');
 
     // If both retrievers return nothing, exit early — nothing to fuse
     if (!vectorResults.length && !lexicalResults.length) return [];
@@ -49,6 +63,11 @@ export class HybridRetrievalService {
     this.applyRRF(scoreMap, vectorResults, 'vector');
     this.applyRRF(scoreMap, lexicalResults, 'lexical');
 
+    // Defensive clamp on the slice bound too — mirrors the same
+    // "don't trust the caller blindly" stance the individual
+    // retrievers already take internally.
+    const safeTopK = clampTop(query.topK);
+
     // Sort by final RRF score descending and emit canonical RetrievedContext shape
     return [...scoreMap.values()]
       .sort((a, b) => b.rrfScore - a.rrfScore)
@@ -58,10 +77,28 @@ export class HybridRetrievalService {
         score: r.rrfScore,
         source: r.source,
         signals: {
-          vectorScore: r.vectorRank,
-          lexicalScore: r.lexicalRank,
+          vectorRank: r.vectorRank,
+          lexicalRank: r.lexicalRank,
         },
       }));
+  }
+
+  /**
+   * Unwraps a settled promise from one retriever. A rejected retriever
+   * degrades to an empty result set rather than failing the whole
+   * hybrid call — the other retriever's results still get returned.
+   */
+  private unwrap(
+    outcome: PromiseSettledResult<RetrievedContext[]>,
+    type: 'vector' | 'lexical',
+  ): RetrievedContext[] {
+    if (outcome.status === 'fulfilled') return outcome.value;
+
+    this.logger.error(
+      { err: outcome.reason, retriever: type },
+      `${type} retriever failed — continuing with partial results`,
+    );
+    return [];
   }
 
   /**

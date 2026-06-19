@@ -152,6 +152,8 @@ export class ChunkRepository {
       .select([
         'chunks.id',
         'chunks.content',
+        'chunks.parent_chunk_id as parentChunkId',
+        'chunks.role',
         'chunks.source_id as documentId',
         'documents.filename',
       ])
@@ -192,9 +194,9 @@ export class ChunkRepository {
   ): Promise<KeywordSearchResult[]> {
     const sql = await getSql();
 
-    const { tenantId, query, limit } = params;
+    const { tenantId, query, limit, filters } = params;
 
-    return this.db.client
+    let qb = this.db.client
       .selectFrom('chunks')
       .innerJoin('documents', 'documents.id', 'chunks.source_id')
       .select([
@@ -207,7 +209,21 @@ export class ChunkRepository {
       .where('chunks.role', '=', ChunkRole.CHILD)
       .where(
         sql<boolean>`to_tsvector('english', chunks.content) @@ plainto_tsquery('english', ${query})`,
-      )
+      );
+
+    // Only apply when non-empty — undefined means "no restriction",
+    // and treating [] the same way avoids accidentally matching zero
+    // rows if an upstream caller passes an empty array by mistake
+    // rather than omitting the filter.
+    if (filters?.documentIds?.length) {
+      qb = qb.where('documents.id', 'in', filters.documentIds);
+    }
+
+    if (filters?.mimeTypes?.length) {
+      qb = qb.where('documents.mime_type', 'in', filters.mimeTypes);
+    }
+
+    return qb
       .orderBy(
         sql`ts_rank(to_tsvector('english', chunks.content), plainto_tsquery('english', ${query}))`,
         'desc',

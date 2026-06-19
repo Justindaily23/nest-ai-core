@@ -9,6 +9,7 @@ import { PromptFormattingModule } from './prompt-formatting/prompt-formatting.mo
 import { EmbeddingModule } from './embeddings/embedding.module';
 import { DatabaseModule } from '@/core/database/database.module';
 import { AppConfigModule } from '@/config/config.module';
+import { QueryModule } from './query/query.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AppConfigModule } from '@/config/config.module';
     CitationBoundaryServiceModule,
     PromptFormattingModule,
     EmbeddingModule,
+    QueryModule,
   ],
   exports: [],
 })

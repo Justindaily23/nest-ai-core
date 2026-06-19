@@ -44,6 +44,17 @@ export class ContextAssemblyService {
       let usedTokens = parentTokens;
       const children: ContextBlock['children'] = [];
 
+      /**
+       * Greedy first-fit: we stop adding children the moment the budget is exceeded,
+       * even if a shorter child further down the list might have fit.
+       *
+       * This is intentional — a bin-packing approach would be more token-efficient
+       * but non-deterministic in output ordering, making the assembled context
+       * harder to test, audit, and reason about.
+       *
+       * Invariant: given the same input in the same order, this method always
+       * produces the same output.
+       */
       for (const child of parent.children) {
         const childTokens = this.tokenizer.countTokens(child.content);
 
