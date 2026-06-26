@@ -15,6 +15,6 @@ import { EmbeddingRepository } from '../persistence/repositories/embedding.repos
       useClass: OpenAIEmbeddingProvider,
     },
   ],
-  exports: [EmbeddingService],
+  exports: [EmbeddingService, EmbeddingProvider],
 })
 export class EmbeddingModule {}

@@ -128,4 +128,105 @@ describe('ContextAssemblyService', () => {
 
     expect(result.blocks.map((b) => b.parentChunkId)).toEqual(['p1', 'p2']);
   });
+
+  it('returns empty result when no parents are provided', () => {
+    const result = service.assemble({ parents: [], tokenBudget: 6000 });
+
+    expect(result.blocks).toEqual([]);
+    expect(result.totalTokens).toBe(0);
+    expect(result.budgetTokens).toBe(6000);
+  });
+
+  it('skips parent entirely if parent content itself exceeds budget', () => {
+    mockTokenizer.countTokens.mockImplementation((text: string) =>
+      text === 'huge-parent' ? 200 : 10,
+    );
+
+    const input: ContextAssemblyInput = {
+      tokenBudget: 100,
+      parents: [
+        {
+          parentChunkId: 'p1',
+          parentContent: 'huge-parent', // 200 tokens — exceeds budget alone
+          score: 0.9,
+          children: [{ chunkId: 'c1', content: 'small', score: 0.9 }],
+        },
+      ],
+    };
+
+    const result = service.assemble(input);
+
+    // Parent can't fit, so nothing is assembled even though child is small
+    expect(result.blocks).toEqual([]);
+    expect(result.totalTokens).toBe(0);
+  });
+
+  it('stops processing parents once budget is exhausted', () => {
+    mockTokenizer.countTokens.mockReturnValue(30);
+
+    const input: ContextAssemblyInput = {
+      tokenBudget: 70, // fits p1 (30 parent + 30 child = 60), p2 would need 30 more = 90, over budget
+      parents: [
+        {
+          parentChunkId: 'p1',
+          parentContent: 'p1',
+          score: 0.9,
+          children: [{ chunkId: 'c1', content: 'c1', score: 0.9 }],
+        },
+        {
+          parentChunkId: 'p2',
+          parentContent: 'p2',
+          score: 0.8,
+          children: [{ chunkId: 'c2', content: 'c2', score: 0.8 }],
+        },
+      ],
+    };
+
+    const result = service.assemble(input);
+
+    expect(result.blocks).toHaveLength(1);
+    expect(result.blocks[0].parentChunkId).toBe('p1');
+  });
+
+  it('budgetTokens reflects the original budget regardless of how much was used', () => {
+    mockTokenizer.countTokens.mockReturnValue(5);
+
+    const result = service.assemble({
+      tokenBudget: 6000,
+      parents: [
+        {
+          parentChunkId: 'p1',
+          parentContent: 'p1',
+          score: 0.9,
+          children: [{ chunkId: 'c1', content: 'c1', score: 0.9 }],
+        },
+      ],
+    });
+
+    // totalTokens is what was used, budgetTokens is the original ceiling
+    expect(result.budgetTokens).toBe(6000);
+    expect(result.totalTokens).toBeLessThan(6000);
+  });
+
+  it('totalTokens equals budgetTokens minus remaining — not just child tokens', () => {
+    // Parent tokens contribute to totalTokens too
+    mockTokenizer.countTokens.mockImplementation((text: string) =>
+      text === 'parent' ? 20 : 10,
+    );
+
+    const result = service.assemble({
+      tokenBudget: 6000,
+      parents: [
+        {
+          parentChunkId: 'p1',
+          parentContent: 'parent',
+          score: 0.9,
+          children: [{ chunkId: 'c1', content: 'child', score: 0.9 }],
+        },
+      ],
+    });
+
+    // 20 (parent) + 10 (child) = 30
+    expect(result.totalTokens).toBe(30);
+  });
 });

@@ -14,15 +14,16 @@
  * entirely avoiding un-parsable log strings.
  */
 
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
-import { IngestionCodec } from '@common/ingestion/ingestion-codec.interface';
-import { IngestionInput } from '@common/ingestion/ingestion-input';
-import { CanonicalDocument } from '@common/ingestion/canonical-document';
+import { IngestionCodec } from '@/modules/ingestion/ingestion-codec.interface';
+import { IngestionInput } from '@/modules/ingestion/ingestion-input';
+import { CanonicalDocument } from '@/modules/ingestion/canonical-document';
 import {
   UnsupportedIngestionFormatError,
   IngestionExtractionError,
-} from '@common/ingestion/ingestion-errors';
+} from '@/modules/ingestion/ingestion-errors';
+import { INGESTION_CODEC_TOKEN } from './ingestion.constants';
 
 @Injectable()
 export class IngestionRouterService {
@@ -34,6 +35,7 @@ export class IngestionRouterService {
      * Nest will inject all registered ingestion codecs here
      * This is how we stay open/closed and allow new parsers to be added without modifying this file
      */
+    @Inject(INGESTION_CODEC_TOKEN)
     private readonly codecs: IngestionCodec[],
   ) {}
 

@@ -71,6 +71,7 @@ export class HybridRetrievalService {
     // Sort by final RRF score descending and emit canonical RetrievedContext shape
     return [...scoreMap.values()]
       .sort((a, b) => b.rrfScore - a.rrfScore)
+      .slice(0, safeTopK)
       .map((r) => ({
         chunkId: r.chunkId,
         content: r.content,

@@ -1,5 +1,3 @@
-import { CitationIndexMap } from '../../citation-boundaries/interfaces/citation-boundary.interface';
-
 export type ValidatedCitation = {
   index: string; // "1", "2" — the ID the LLM used
   chunkId: string;

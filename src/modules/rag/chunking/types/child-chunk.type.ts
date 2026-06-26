@@ -2,8 +2,6 @@
  * @file child-chunk.type.ts
  * @description INVARIANT SEARCH BOUNDARY: The High-Precision Vector Target.
  */
-import { ChunkRole } from '@/common/enums/chunk-role.enum';
-
 export interface ChildChunk {
   /** Stable deterministic hash generated from (tenantId + sourceId + 'child' + absoluteChildStart). */
   readonly id: string;

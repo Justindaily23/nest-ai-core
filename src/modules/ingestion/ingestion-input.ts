@@ -14,6 +14,8 @@
  * controller layer all the way to the layout extraction layer.
  */
 
+import { LayoutStrategy } from './codecs/interface/ingestion-strategies.constants';
+
 export interface IngestionInput {
   /** The tenant context extracted from the identity spine. Enforces immediate data boundary isolation. */
   readonly tenantId: string;
@@ -36,6 +38,8 @@ export interface IngestionInput {
     readonly domain?: 'medical' | 'financial' | 'generic';
 
     /** Specific named parsing strategy target (e.g., 'ocr-forced', 'native-text-only'). */
-    readonly layoutStrategy?: string;
+    readonly layoutStrategy?: LayoutStrategy;
+
+    readonly sourceId?: string;
   };
 }

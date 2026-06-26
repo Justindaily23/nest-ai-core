@@ -18,9 +18,10 @@ export class EmbeddingRepository {
 
   async upsert(params: CreateEmbeddingParams): Promise<void> {
     const sql = await getSql();
-    // Guard: empty vectors produce silent pgvector errors and waste
-    // a DB round-trip.
-    // Fail immediately with a structured code so ingestion bugs surface at the source.
+    /**
+     * Guard: empty vectors produce silent pgvector errors and waste a DB round-trip.
+     *  Fail immediately with a structured code so ingestion bugs surface at the source.
+     */
     if (!params.embedding || params.embedding.length === 0) {
       throw new DatabaseStorageException(
         'database', // Classified as a structural input block
@@ -30,8 +31,10 @@ export class EmbeddingRepository {
       );
     }
 
-    // Single string literal bind parameter — avoids per-dimension SQL interpolation
-    // that bloats query strings and stresses the pg wire protocol at scale.
+    /**
+     *  Single string literal bind parameter — avoids per-dimension SQL interpolation
+     *  that bloats query strings and stresses the pg wire protocol at scale.
+     */
     const vectorLiteral = `[${params.embedding.join(',')}]`;
     const vectorSql = sql`${vectorLiteral}::vector`;
 

@@ -8,9 +8,11 @@ import { HybridRetrievalService } from './services/hybrid-retrieval.service';
 import { LexicalRetrievalService } from './services/lexical-retrieval.service';
 import { VectorRetrieverAdapter } from './adapters/vector-retriever.adapter';
 import { ParentExpansionService } from './services/parent-expansion.service';
+import { QueryEmbeddingService } from './services/query-embedding.service';
+import { EmbeddingModule } from '../embeddings/embedding.module';
 
 @Module({
-  imports: [PersistenceModule],
+  imports: [PersistenceModule, EmbeddingModule],
   providers: [
     VectorRetrievalService,
     RetrievalRepository,
@@ -21,6 +23,7 @@ import { ParentExpansionService } from './services/parent-expansion.service';
     VectorRetrievalService,
     VectorRetrieverAdapter,
     ParentExpansionService,
+    QueryEmbeddingService,
   ],
   exports: [RetrievalExecutionService],
 })

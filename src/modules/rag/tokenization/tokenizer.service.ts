@@ -14,7 +14,7 @@ import { type Tokenizer } from './interfaces/tokenizer.interface';
 @Injectable()
 export class TokenizerService {
   constructor(
-    // We inject using a string token or class reference to decouple the implementation
+    // We inject using a string token
     @Inject('TOKENIZER_PROVIDER')
     private readonly tokenizer: Tokenizer,
   ) {}

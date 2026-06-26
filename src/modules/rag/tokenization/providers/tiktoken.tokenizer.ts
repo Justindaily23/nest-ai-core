@@ -20,12 +20,6 @@ export class TiktokenTokenizer implements Tokenizer, BeforeApplicationShutdown {
    */
   private readonly encoder: Tiktoken;
 
-  /**
-   * Thread-safe, standard utility instance for reliable byte-to-string extraction.
-   * Eliminates character-boundary corruption on multi-byte characters like emojis or non-English scripts.
-   */
-  private readonly textDecoder = new TextDecoder('utf-8');
-
   constructor() {
     /**
      * Standardizes the vocabulary space matching OpenAI's third-generation embedding models
