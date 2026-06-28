@@ -4,17 +4,37 @@ import { PdfSectionBuilder } from './codecs/pdf/pdf.section-builder';
 import { PdfParser } from './codecs/pdf/pdf.parser';
 import { PdfCodec } from './codecs/pdf/pdf.codec';
 import { INGESTION_CODEC_TOKEN } from './ingestion.constants';
+import { BullModule } from '@nestjs/bullmq';
+import { INGESTION_QUEUE_NAME } from './queue/ingestion-queue.constants';
+import { IngestionProducer } from './queue/ingestion.producer';
+import { IngestionWorker } from './queue/ingestion.worker';
 
 @Module({
+  imports: [
+    BullModule.registerQueue({
+      name: INGESTION_QUEUE_NAME,
+    }),
+  ],
   providers: [
-    IngestionRouterService,
+    // Codec implementations
     PdfParser,
+    PdfCodec,
     PdfSectionBuilder,
+
+    // Codec array injection — router stays open/closed
     {
       provide: INGESTION_CODEC_TOKEN,
-      useClass: PdfCodec,
+      useFactory: (pdfCodec: PdfCodec) => [pdfCodec],
+      inject: [PdfCodec],
     },
+
+    // Core services
+    IngestionRouterService,
+
+    // Queue
+    IngestionProducer,
+    IngestionWorker,
   ],
-  exports: [IngestionRouterService],
+  exports: [IngestionRouterService, IngestionProducer],
 })
 export class IngestionModule {}

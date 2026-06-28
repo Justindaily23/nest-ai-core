@@ -1,5 +1,5 @@
-import { ContextService } from '../../common/context/context.service';
-import { JobExecutionContext } from './job-context';
+import { ContextService } from './context.service';
+import { JobExecutionContext } from '../../core/queue/job-context';
 
 export class ContextSerializer {
   static fromActiveContext(

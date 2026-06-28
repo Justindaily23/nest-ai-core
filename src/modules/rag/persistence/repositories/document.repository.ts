@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '@core/database/database.service';
-import { CreateDocumentParams } from './interfaces/document-repository.interface';
+import {
+  CreateDocumentParams,
+  UpdateDocumentStatus,
+} from './interfaces/document-repository.interface';
 
 @Injectable()
 export class DocumentRepository {
@@ -30,5 +33,15 @@ export class DocumentRepository {
       .limit(1)
       .executeTakeFirst();
     return !!result;
+  }
+
+  async updateStatus(params: UpdateDocumentStatus): Promise<void> {
+    const { tenantId, documentId, status, errorMessage } = params;
+    await this.db.client
+      .updateTable('documents')
+      .set({ status: status, error_message: errorMessage ?? null })
+      .where('id', '=', documentId)
+      .where('tenant_id', '=', tenantId)
+      .execute();
   }
 }

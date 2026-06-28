@@ -1,1 +1,1 @@
-export type { Generated, JSONColumnType } from 'kysely';
+// export type { Generated, JSONColumnType } from 'kysely';

@@ -2,7 +2,7 @@ import type { Generated, JSONColumnType } from 'kysely' with {
   'resolution-mode': 'import',
 };
 import type { ChunkRole } from '@common/enums/chunk-role.enum';
-
+import type { DocumentStatus } from '@/modules/rag/persistence/repositories/interfaces/document-repository.interface';
 /**
  * Core table tracking uploaded raw files (e.g., PDFs, Word docs, Slack exports).
  * Used primarily for administrative audits and global deduplication tracking.
@@ -14,6 +14,8 @@ export interface DocumentsTable {
   filename: string | null;
   mime_type: string | null;
   checksum: string;
+  status: Generated<DocumentStatus>;
+  error_message: string | null;
   metadata: JSONColumnType<Record<string, unknown>> | null;
   created_at: Generated<Date>; // Database auto-assigns DEFAULT NOW() on entry. Optional on insert.
 }

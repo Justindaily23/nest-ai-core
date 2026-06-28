@@ -64,7 +64,7 @@ export class IngestionRouterService {
     try {
       this.logger.debug({
         codec: codecName,
-        tenentId: input.tenantId,
+        tenantId: input.tenantId,
         filename: input.filename,
         mimeType: input.mimeType,
         message: 'Document extraction codec selected',
@@ -76,7 +76,7 @@ export class IngestionRouterService {
         err: error,
         codec: codec.constructor.name,
         tenantId: input.tenantId,
-        Message: 'Codec Extraction Failed',
+        message: 'Codec Extraction Failed',
       });
 
       throw new IngestionExtractionError();

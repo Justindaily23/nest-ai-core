@@ -37,6 +37,11 @@ CREATE TABLE IF NOT EXISTS documents (
     
     -- Flexible binary JSON container for codec structural markers (e.g., page maps).
     metadata JSONB,
+
+    status TEXT NOT NULL DEFAULT 'pending'
+      CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
+
+    error_message TEXT,
     
     -- Immutable timezone-aware system creation marker.
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -48,6 +53,9 @@ CREATE INDEX idx_documents_tenant ON documents (tenant_id);
 
 -- Hard safety constraint: Blocks duplicate ingestion processing loops per tenant.
 CREATE UNIQUE INDEX idx_documents_dedup ON documents (tenant_id, checksum);
+
+-- Index for worker queries — "give me all pending documents for this tenant"
+CREATE INDEX idx_documents_status ON documents (tenant_id, status);
 
 
 
