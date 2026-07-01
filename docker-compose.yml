@@ -13,7 +13,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       # Explicit variables match your external environment strings perfectly
-      test: ['CMD-SHELL', 'pg_isready -U ${DB_USERNAME} -d ${DB_NAME}']
+      test: ['CMD-SHELL', 'pg_isready -U $${DB_USERNAME} -d $${DB_NAME}']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -33,13 +33,33 @@ services:
       timeout: 5s
       retries: 5
 
+  db_migrations:
+    image: pgvector/pgvector:pg16
+    container_name: nest_ai_core_migrations
+    environment:
+      PGPASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./src/core/database/migrations:/migrations
+    entrypoint: ['/bin/sh', '-c']
+    # FIXED: JSON array format completely isolates variables from Docker Compose parsing
+    command:
+      - |
+        for file in /migrations/*.sql; do
+          echo "Executing: $$file"
+          psql -h postgres -U "${DB_USERNAME}" -d "${DB_NAME}" -f "$$file" || exit 1
+        done
+        echo "All discovered migrations processed successfully!"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   api:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: nest_ai_core_api
     restart: unless-stopped
-    command: npm run start:dev
+    command: npx nest start --watch --no-delete
     env_file:
       - .env
     ports:
@@ -49,8 +69,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      db_migrations:
+        condition: service_completed_successfully
     volumes:
-      # FIXED: Changed from /app to /usr/src/app to match your Dockerfile working directory
       - .:/usr/src/app
       - /usr/src/app/node_modules
 
