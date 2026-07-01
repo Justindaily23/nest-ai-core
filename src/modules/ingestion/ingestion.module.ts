@@ -8,6 +8,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { INGESTION_QUEUE_NAME } from './queue/ingestion-queue.constants';
 import { IngestionProducer } from './queue/ingestion.producer';
 import { IngestionWorker } from './queue/ingestion.worker';
+import { IngestionController } from './ingestion.controller';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { IngestionWorker } from './queue/ingestion.worker';
       name: INGESTION_QUEUE_NAME,
     }),
   ],
+  controllers: [IngestionController],
   providers: [
     // Codec implementations
     PdfParser,

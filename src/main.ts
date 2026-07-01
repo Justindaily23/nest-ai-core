@@ -6,6 +6,7 @@ import {
 import { AppModule } from './app.module';
 import { Logger } from 'nestjs-pino';
 import { AppConfigService } from './config/config.service';
+import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -22,6 +23,8 @@ async function bootstrap() {
 
   // Use the custom logger from nestjs-pino
   app.useLogger(app.get(Logger));
+
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   // Get the custom config service
   const config = app.get(AppConfigService);

@@ -73,6 +73,7 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
 
     this.logger.error(errorLog, 'Unhandled exception');
 
+    if (response.sent) return;
     //  Clean, standardized API response
     void response.status(statusCode).send({
       success: false,

@@ -42,7 +42,7 @@ export class SystemLoggingInterceptor implements NestInterceptor {
       catchError((error) => {
         const durationMs = Date.now() - startTime;
 
-        const errorLog: HttpInterceptorLogPayload = {
+        const performanceMetricsLog: HttpInterceptorLogPayload = {
           system: 'http',
           executionContext,
           http: { method, url },
@@ -51,9 +51,7 @@ export class SystemLoggingInterceptor implements NestInterceptor {
           },
           err: serializeException(error), // Reusable normalization
         };
-
-        this.logger.error(errorLog, 'Execution failed');
-
+        this.logger.warn(performanceMetricsLog, 'Execution failed metrics');
         throw error;
       }),
     );
