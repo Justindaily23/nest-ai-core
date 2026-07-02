@@ -1,8 +1,12 @@
 import { Job } from 'bullmq';
 import { JobEnvelope } from './job-envelop';
 import { JobContextRunner } from './job-context-runner';
+import { WorkerHost } from '@nestjs/bullmq';
 
-export abstract class BaseWorker<TPayload> {
+export abstract class BaseWorker<TPayload> extends WorkerHost {
+  constructor() {
+    super();
+  }
   async process(job: Job<JobEnvelope<TPayload>>): Promise<void> {
     const { context, payload } = job.data;
 

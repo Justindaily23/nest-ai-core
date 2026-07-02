@@ -14,6 +14,7 @@ import { CreateChunkParams } from '@/modules/rag/persistence/repositories/interf
 import { CanonicalDocument } from '../canonical-document';
 import { DEFAULT_STRATEGY } from '@/modules/rag/chunking/constants/chunking-strategy.constant';
 import { ChunkRole } from '@/common/enums/chunk-role.enum';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Processor(INGESTION_QUEUE_NAME)
 export class IngestionWorker extends BaseWorker<IngestionJobData> {
@@ -25,6 +26,7 @@ export class IngestionWorker extends BaseWorker<IngestionJobData> {
     private readonly embeddingService: EmbeddingService,
     private readonly chunkRepository: ChunkRepository,
     private readonly documentRepository: DocumentRepository,
+    private readonly eventEmitter: EventEmitter2,
     @InjectPinoLogger(IngestionWorker.name) private readonly logger: PinoLogger,
   ) {
     super();
@@ -62,6 +64,10 @@ export class IngestionWorker extends BaseWorker<IngestionJobData> {
       status: 'processing',
     });
 
+    // Declare tracking references outside the try/catch block so they are accessible inside catch errors
+    let allChunkParams: CreateChunkParams[] = [];
+    let childChunks: CreateChunkParams[] = [];
+
     try {
       // Hydrate the serialized JSON number array back into a high-performance binary Buffer for downstream parsers.
       const fileBuffer = Buffer.from(buffer);
@@ -85,10 +91,13 @@ export class IngestionWorker extends BaseWorker<IngestionJobData> {
         'Stage 1 complete: document extracted',
       );
 
-      // Stage 2 -  chunk
-      const allChunkParams: CreateChunkParams[] = [];
+      // // Stage 2 -  chunk
+      // const allChunkParams: CreateChunkParams[] = [];
 
-      for (const section of canonicalDocument.sections) {
+      for (const [
+        sectionIndex,
+        section,
+      ] of canonicalDocument.sections.entries()) {
         if (!section.rawText.trim()) continue;
 
         const { parents, children } = this.chunker.execute(
@@ -96,6 +105,7 @@ export class IngestionWorker extends BaseWorker<IngestionJobData> {
           documentId,
           section.rawText,
           DEFAULT_STRATEGY,
+          sectionIndex,
         );
 
         parents.forEach((parent, index) => {
@@ -149,9 +159,7 @@ export class IngestionWorker extends BaseWorker<IngestionJobData> {
       );
 
       // STAGE 4: Embed child chunks
-      const childChunks = allChunkParams.filter(
-        (c) => c.role === ChunkRole.CHILD,
-      );
+      childChunks = allChunkParams.filter((c) => c.role === ChunkRole.CHILD);
 
       for (const child of childChunks) {
         await this.embeddingService.embedChunk({
@@ -174,6 +182,14 @@ export class IngestionWorker extends BaseWorker<IngestionJobData> {
         status: 'completed',
       });
 
+      // EVENT EMITTER EMITS SUCCESS EVENT
+      this.eventEmitter.emit('document.completed', {
+        tenantId,
+        documentId,
+        totalChunks: allChunkParams.length,
+        embeddedChunks: childChunks.length,
+      });
+
       this.logger.info(
         {
           jobId: job.id,
@@ -193,6 +209,13 @@ export class IngestionWorker extends BaseWorker<IngestionJobData> {
         documentId,
         status: 'failed',
         errorMessage,
+      });
+
+      this.eventEmitter.emit('document.failed', {
+        tenantId,
+        documentId,
+        error: errorMessage,
+        attempt: job.attemptsMade + 1,
       });
 
       this.logger.error(

@@ -52,6 +52,7 @@ export class ParentChildChunkerService {
     documentId: string,
     content: string,
     strategy: ChunkingStrategy = DEFAULT_STRATEGY,
+    sectionIndex: number = 0,
   ): ChunkingResult {
     const parents: ParentChunk[] = [];
     const children: ChildChunk[] = [];
@@ -134,6 +135,7 @@ export class ParentChildChunkerService {
       const parentId = this.createParentId(
         tenantId,
         documentId,
+        sectionIndex,
         parentStartOffset,
       );
 
@@ -191,6 +193,7 @@ export class ParentChildChunkerService {
         const childId = this.createChildId(
           tenantId,
           documentId,
+          sectionIndex,
           parentId,
           absoluteChildStart,
         );
@@ -253,11 +256,12 @@ export class ParentChildChunkerService {
   private createParentId(
     tenantId: string,
     documentId: string,
+    sectionIndex: number,
     parentStartOffset: number,
   ): string {
     return createHash('sha256')
       .update(
-        `${tenantId}:${documentId}:${ChunkRole.PARENT}:${parentStartOffset}`,
+        `${tenantId}:${documentId}:${sectionIndex}:${ChunkRole.PARENT}:${parentStartOffset}`,
       )
       .digest('hex');
   }
@@ -274,12 +278,13 @@ export class ParentChildChunkerService {
   private createChildId(
     tenantId: string,
     documentId: string,
+    sectionIndex: number,
     parentId: string,
     absoluteChildStart: number,
   ): string {
     return createHash('sha256')
       .update(
-        `${tenantId}:${documentId}:${ChunkRole.CHILD}:${parentId}:${absoluteChildStart}`,
+        `${tenantId}:${documentId}:${sectionIndex}:${ChunkRole.CHILD}:${parentId}:${absoluteChildStart}`,
       )
       .digest('hex');
   }

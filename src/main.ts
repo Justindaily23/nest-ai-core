@@ -7,6 +7,7 @@ import { AppModule } from './app.module';
 import { Logger } from 'nestjs-pino';
 import { AppConfigService } from './config/config.service';
 import { ValidationPipe } from '@nestjs/common';
+import fastifyMultipart from '@fastify/multipart';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -17,6 +18,12 @@ async function bootstrap() {
     }),
     { bufferLogs: true },
   );
+
+  await app.register(fastifyMultipart, {
+    limits: {
+      fileSize: 50 * 1024 * 1024, // 50MB Max limit matching your controller guard
+    },
+  });
 
   //Global routing version prefix
   app.setGlobalPrefix('api/v1');

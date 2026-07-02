@@ -13,7 +13,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       # Explicit variables match your external environment strings perfectly
-      test: ['CMD-SHELL', 'pg_isready -U $${DB_USERNAME} -d $${DB_NAME}']
+      test: 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB'
       interval: 10s
       timeout: 5s
       retries: 5
@@ -36,6 +36,10 @@ services:
   db_migrations:
     image: pgvector/pgvector:pg16
     container_name: nest_ai_core_migrations
+    env_file:
+      - .env
+    networks:
+      - default
     environment:
       PGPASSWORD: ${DB_PASSWORD}
     volumes:
@@ -46,7 +50,7 @@ services:
       - |
         for file in /migrations/*.sql; do
           echo "Executing: $$file"
-          psql -h postgres -U "${DB_USERNAME}" -d "${DB_NAME}" -f "$$file" || exit 1
+          psql -h postgres -U "$${DB_USERNAME}" -d "$${DB_NAME}" -f "$$file" || exit 1
         done
         echo "All discovered migrations processed successfully!"
     depends_on:
@@ -59,9 +63,12 @@ services:
       dockerfile: Dockerfile
     container_name: nest_ai_core_api
     restart: unless-stopped
-    command: npx nest start --watch --no-delete
+    command: pnpm run start:dev
     env_file:
       - .env
+    environment:
+      - NPM_CONFIG_CONFIRM_MODULES_PURGE=false
+      - CI=true
     ports:
       - '3000:3000'
     depends_on:
@@ -78,3 +85,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+
+networks:
+  default:
+    driver: bridge

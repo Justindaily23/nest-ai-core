@@ -44,4 +44,18 @@ export class DocumentRepository {
       .where('tenant_id', '=', tenantId)
       .execute();
   }
+
+  async findStatusById(
+    tenantId: string,
+    documentId: string,
+  ): Promise<
+    { id: string; status: string; errorMessage: string | null } | undefined
+  > {
+    return this.db.client
+      .selectFrom('documents')
+      .select(['id', 'status', 'error_message as errorMessage'])
+      .where('id', '=', documentId)
+      .where('tenant_id', '=', tenantId)
+      .executeTakeFirst();
+  }
 }

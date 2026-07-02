@@ -17,6 +17,8 @@ RUN pnpm_config_minimum_release_age=0 pnpm install --dangerously-allow-all-build
 # Copy source code
 COPY . .
 
+RUN pnpm run build
+
 # Expose port
 EXPOSE 3000
 

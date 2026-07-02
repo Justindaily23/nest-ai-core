@@ -36,15 +36,29 @@ const KyselyProvider: Provider = {
       }),
       // Hook into Kysely's built-in global telemetry pipeline
       log: (event) => {
+        const sanitizedParameters = event.query.parameters.map((param) => {
+          // Detect vector arrays — large number arrays used for embeddings
+          if (Array.isArray(param) && param.length > 100) {
+            return `[Vector truncated: ${param.length} dimensions]`;
+          }
+
+          // Detect serialized vector strings — some pg versions serialize before logging
+          if (typeof param === 'string' && param.length > 500) {
+            return `[Large parameter truncated: ${param.length} chars]`;
+          }
+
+          return param;
+        });
+
         if (event.level === 'query') {
-          logger.info(
+          logger.debug(
             {
               context: 'KyselyEngine',
               sql: event.query.sql,
-              parameters: event.query.parameters,
+              parameters: sanitizedParameters,
               durationMs: event.queryDurationMillis,
             },
-            `Executed SQL Query`,
+            'Executed SQL Query',
           );
         } else if (event.level === 'error') {
           logger.error(
